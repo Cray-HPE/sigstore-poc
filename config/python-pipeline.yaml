@@ -1,0 +1,44 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: python-build-pipeline
+spec:
+  params:
+    - name: git-url
+    - name: git-revision
+#    - name: image-name
+#    - name: path-to-image-context
+#    - name: path-to-dockerfile
+  workspaces:
+    - name: git-source
+    - name: dependencies
+  tasks:
+    - name: fetch-from-git
+      taskRef:
+        name: git-clone
+      params:
+        - name: url
+          value: $(params.git-url)
+        - name: revision
+          value: $(params.git-revision)
+      workspaces:
+        - name: output
+          workspace: git-source
+    - name: install-dependencies
+      runAfter:
+      - fetch-from-git
+      taskRef:
+        name: install-python-dependencies
+      workspaces:
+        - name: source
+          workspace: git-source
+        - name: dependencies
+          workspace: dependencies
+    - name: list-dependencies
+      runAfter:
+      - install-dependencies
+      taskRef:
+        name: list-dependencies
+      workspaces:
+        - name: dependencies
+          workspace: dependencies
