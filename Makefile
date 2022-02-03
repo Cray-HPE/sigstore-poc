@@ -49,7 +49,11 @@ tf_target_apply:
 	   	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
         	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
         	        		-var="config_context=${K8S_CONTEXT}" \
-        		-target=google_container_cluster.primary -target=google_service_account.gke-user -target=google_project_iam_member.gcr_member
+        		-target=google_container_cluster.primary \
+        		-target=google_service_account.gke-user \
+        		-target=google_project_iam_member.gcr_member \
+        		-auto-approve
+
 
 tf_plan: tf_target_plan
 	cd terraform/ && \

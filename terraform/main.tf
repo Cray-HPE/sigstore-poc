@@ -10,7 +10,7 @@ resource "helm_release" "tekton" {
 
 
 resource "helm_release" "tekton-dashboard" {
-  depends_on       = [helm_release.tekton,google_container_cluster.primary]
+  depends_on       = [helm_release.tekton, google_container_cluster.primary]
   name             = "tekton-dashboard"
   chart            = var.tk_dashboard_local
   version          = var.tk_dashboard_helm_chart_version
@@ -21,7 +21,7 @@ resource "helm_release" "tekton-dashboard" {
 
 
 resource "helm_release" "tekton-chains" {
-  depends_on       = [helm_release.tekton,google_container_cluster.primary]
+  depends_on       = [helm_release.tekton, google_container_cluster.primary]
   name             = "tekton-chains"
   chart            = var.tk_chains_local
   version          = var.tk_chains_helm_chart_version

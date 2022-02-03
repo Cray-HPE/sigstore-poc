@@ -158,18 +158,18 @@ resource_blaster serving serving-default-domain.yaml | kubectl apply -f -
 
 # Wait for the job to complete, so we can reliably use ksvc hostnames.
 kubectl wait -n knative-serving --timeout=90s --for=condition=Complete jobs --all
-
 echo '::endgroup::'
 
+
 echo '::group:: Install Sigstore scaffolding'
-curl -L https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.12-alpha/release-arm.yaml | kubectl apply -f -
+kubectl apply -f release-arm-gke.yaml
 echo "waiting for sigstore pieces to come up"
 kubectl wait --timeout=10m -A --for=condition=Complete jobs --all
 
 echo "Running smoke test"
 kubectl -n ctlog-system get secrets ctlog-public-key -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
-curl -L https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.12-alpha/testrelease.yaml | kubectl apply -f -
-kubectl wait --timeout=5m --for=condition=Complete jobs checktree
+kubectl apply -f testrlease-gke.yaml
+kubectl wait --timeout=10m --for=condition=Complete jobs checktree
 echo '::endgroup:: Install Sigstore scaffolding'
 
 

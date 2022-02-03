@@ -4,6 +4,34 @@ resource "google_service_account" "gke-user" {
   project      = var.PROJECT_ID
 }
 
+resource "google_service_account_iam_binding" "service-account-iam" {
+  service_account_id = google_service_account.gke-user.name
+  role               = "roles/iam.serviceAccountUser"
+
+  members = [
+    "serviceAccount:${var.PROJECT_ID}.svc.id.goog[default/gke-user]"
+  ]
+}
+
+resource "google_service_account_iam_binding" "workload-account-iam" {
+  service_account_id = google_service_account.gke-user.name
+  role               = "roles/iam.workloadIdentityUser"
+
+  members = [
+    "serviceAccount:${var.PROJECT_ID}.svc.id.goog[default/gke-user]"
+  ]
+}
+
+
+resource "kubernetes_service_account" "gcr" {
+  metadata {
+    name = "gke-user"
+    annotations = {
+      "iam.gke.io/gcp-service-account" = google_service_account.gke-user.name
+    }
+  }
+}
+
 resource "google_container_cluster" "primary" {
   name               = "chainguard-dev"
   location           = var.CLUSTER_LOCATION != "" ? var.CLUSTER_LOCATION : var.DEFAULT_LOCATION
