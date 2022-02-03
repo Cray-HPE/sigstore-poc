@@ -32,7 +32,26 @@ tf_get:
 	cd terraform/ && \
 	terraform get
 
-tf_plan:
+# Target apply for the GKE cluster, it has to exist before helm provider can use it
+tf_target_plan:
+	cd terraform/ && \
+	terraform plan \
+	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
+	   	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
+        	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
+        	        		-var="config_context=${K8S_CONTEXT}" \
+        		-target=google_container_cluster.primary -target=google_service_account.gke-user -target=google_project_iam_member.gcr_member
+
+tf_target_apply:
+	cd terraform/ && \
+	terraform apply \
+	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
+	   	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
+        	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
+        	        		-var="config_context=${K8S_CONTEXT}" \
+        		-target=google_container_cluster.primary -target=google_service_account.gke-user -target=google_project_iam_member.gcr_member
+
+tf_plan: tf_target_plan
 	cd terraform/ && \
 	terraform plan \
 	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
@@ -41,7 +60,7 @@ tf_plan:
         	        		-var="config_context=${K8S_CONTEXT}" \
         		-out=plan.out
 
-tf_apply:
+tf_apply: tf_target_apply
 	cd terraform/ && \
 	terraform apply \
 	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
