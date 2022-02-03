@@ -14,6 +14,7 @@ resource "helm_release" "tekton-dashboard" {
   chart      = var.tk_dashboard_local
   version = var.tk_dashboard_helm_chart_version
   namespace = var.tk_pl_namespace
+  create_namespace = false
   force_update = true
 }
 

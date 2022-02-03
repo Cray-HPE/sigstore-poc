@@ -1,8 +1,6 @@
 KIND_CLUSTER_NAME=tekton-tf-dev
 KIND_LOG_LEVEL=6
 
-TK_PL_HELM_VERSION="0.1.1"
-
 include .env
 
 export
@@ -40,6 +38,7 @@ tf_plan:
 	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
 	   	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
         	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
+        	        		-var="config_context=${K8S_CONTEXT}" \
         		-out=plan.out
 
 tf_apply:
@@ -48,7 +47,8 @@ tf_apply:
 	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
 	   	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
         	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
-		-auto-approve
+        		-var="config_context=${K8S_CONTEXT}" \
+        	-auto-approve
 
 tf_fmt:
 	cd terraform/ && \
@@ -60,4 +60,5 @@ tf_destroy:
 	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
 	   	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
         	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
+        	        		-var="config_context=${K8S_CONTEXT}" \
 		-auto-approve
