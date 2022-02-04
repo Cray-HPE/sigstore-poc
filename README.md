@@ -114,3 +114,11 @@ And then the pipeline should complete successfully, you can follow along:
 ```shell
 kubectl get pipelineruns -w
 ```
+
+If you have tekton dashboard installed 
+
+```bash
+kubectl port-forward svc/tekton-dashboard 9097:9097 -n tekton-pipelines
+```
+
+![](images/tekton-dashboards.png)
