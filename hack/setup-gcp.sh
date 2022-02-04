@@ -41,35 +41,6 @@ while [[ $# -ne 0 ]]; do
 done
 
 
-
-## Configure registry for KinD.
-#containerdConfigPatches:
-#- |-
-#  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."$REGISTRY_NAME:$REGISTRY_PORT"]
-#    endpoint = ["http://$REGISTRY_NAME:$REGISTRY_PORT"]
-#
-## This is needed in order to support projected volumes with service account tokens.
-## See: https://kubernetes.slack.com/archives/CEKK1KTN2/p1600268272383600
-#kubeadmConfigPatches:
-#  - |
-#    apiVersion: kubeadm.k8s.io/v1beta2
-#    kind: ClusterConfiguration
-#    metadata:
-#      name: config
-#    apiServer:
-#      extraArgs:
-#        "service-account-issuer": "https://kubernetes.default.svc"
-#        "service-account-signing-key-file": "/etc/kubernetes/pki/sa.key"
-#        "service-account-jwks-uri": "https://kubernetes.default.svc/openid/v1/jwks"
-#        "service-account-key-file": "/etc/kubernetes/pki/sa.pub"
-#    networking:
-#      dnsDomain: "${CLUSTER_SUFFIX}"
-#EOF
-
-# https://cloud.google.com/community/tutorials/gke-workload-id-clientserver
-#gcloud beta container clusters create $CLUSTER \
-#    --workload-pool=$PROJECT.svc.id.goog
-
 echo '::group:: Expose OIDC Discovery'
 
 # From: https://banzaicloud.com/blog/kubernetes-oidc/
@@ -80,7 +51,7 @@ echo '::group:: Expose OIDC Discovery'
 # but only public keys are visible on this URL)
 kubectl create clusterrolebinding oidc-reviewer \
   --clusterrole=system:service-account-issuer-discovery \
-  --group=system:unauthenticated
+  --group=system:unauthenticated --dry-run=client -o yaml | kubectl apply -f -
 
 echo '::endgroup::'
 
@@ -162,13 +133,14 @@ echo '::endgroup::'
 
 
 echo '::group:: Install Sigstore scaffolding'
-kubectl apply -f release-arm-gke.yaml
+kubectl apply -f ./hack/release-arm-gke.yaml
 echo "waiting for sigstore pieces to come up"
 kubectl wait --timeout=10m -A --for=condition=Complete jobs --all
 
 echo "Running smoke test"
-kubectl -n ctlog-system get secrets ctlog-public-key -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
-kubectl apply -f testrlease-gke.yaml
+kubectl get cm kube-root-ca.crt || kubectl -n ctlog-system get secrets ctlog-public-key -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
+
+kubectl apply -f ./hack/testrelease-gke.yaml
 kubectl wait --timeout=10m --for=condition=Complete jobs checktree
 echo '::endgroup:: Install Sigstore scaffolding'
 
@@ -192,5 +164,4 @@ kubectl -n tekton-chains delete po -l app=tekton-chains-controller
 
 # Install the default task for fetching from github
 kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/main/task/git-clone/0.5/git-clone.yaml
-
 echo '::endgroup::'
