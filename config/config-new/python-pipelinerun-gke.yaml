@@ -34,6 +34,14 @@ spec:
       #value: "https://github.com/vaikas/build-playground.git"
     - name: git-revision
       value: "main"
+    - name: imageUrl
+      value: "gcr.io/chainguard-dev/pythontest"
+    - name: imageTag
+      value: "0.1"
+    - name: fulcio-endpoint
+      value: "fulcio.fulcio-system.svc"
+    - name: rekor-endpoint
+      value: "rekor.rekor-system.svc"
   pipelineRef:
     name: python-build-pipeline
   workspaces:
@@ -43,3 +51,9 @@ spec:
   - name: dependencies # must match workspace name in Pipeline
     persistentVolumeClaim:
       claimName: python-dependencies-storage # this PVC must already exist
+  - name: dockerfile-cm
+    configMap:
+      name: dockerfile
+      items:
+      - key: Dockerfile
+        path: Dockerfile

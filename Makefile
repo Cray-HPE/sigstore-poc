@@ -9,7 +9,7 @@ dev_cluster:
 	 kind create cluster \
         --verbosity=${KIND_LOG_LEVEL} \
         --name ${KIND_CLUSTER_NAME} \
-        --config ./kind.yaml \
+        --config ./config/kind.yaml \
         --retain
 
 delete_cluster:

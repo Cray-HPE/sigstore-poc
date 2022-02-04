@@ -1,0 +1,69 @@
+# Copyright 2021 Chainguard, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: scan-trivy
+    # If you need to use a specific Service Account you can change this.
+    # refresher.chainguard.dev/run-as: customer-builder
+  labels:
+    attestations.chainguard.dev/predicate-type: scan-trivy
+spec:
+  params:
+  - name: dev.chainguard.refresher.digest
+    type: string
+  - name: dev.chainguard.refresher.target-registry
+    type: string
+    default: ""
+  - name: dev.chainguard.refresher.fulcio-endpoint
+    type: string
+    default: "https://fulcio.sigstore.dev"
+  - name: dev.chainguard.refresher.rekor-endpoint
+    type: string
+    default: "https://rekor.sigstore.dev"
+  steps:
+  - name: trivyscan
+    image: docker.io/aquasec/trivy:0.23.0
+    command: ["trivy"]
+    args: [
+      "-q", "image",
+      "-format", "json",
+      "-o", "/workspace/image.trivy",
+      "$(params['dev.chainguard.refresher.digest'])"
+    ]
+  - name: publish-scan-results
+    image: gcr.io/projectsigstore/cosign:v1.5.1
+    timeout: 10m
+    args: [
+      "attest",
+      # Use workload identity to access images
+      "--k8s-keychain",
+      # Disable timeout (registry http fallback takes more than the default)
+      "--timeout=0",
+      # Force the upload
+      "--force",
+      # Use the Rekor URL provided by the refresher.
+      "--rekor-url", "$(params['dev.chainguard.refresher.rekor-endpoint'])",
+      # Use the Fulcio URL provided by the refresher.
+      "--fulcio-url", "$(params['dev.chainguard.refresher.fulcio-endpoint'])",
+      # Use the "predicate" produced by the previous step.
+      "--predicate", "/workspace/image.trivy",
+      "$(params['dev.chainguard.refresher.digest'])"
+    ]
+    env:
+    - name: COSIGN_EXPERIMENTAL
+      value: "1"
+    - name: COSIGN_REPOSITORY
+      value: $(params["dev.chainguard.refresher.target-registry"])
+    volumeMounts:
+    - name: oidc-info
+      mountPath: /var/run/sigstore/cosign
+  volumes:
+  - name: oidc-info
+    projected:
+      sources:
+        - serviceAccountToken:
+            path: oidc-token
+            expirationSeconds: 600 # Use as short-lived as possible.
+            audience: sigstore

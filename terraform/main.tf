@@ -29,8 +29,3 @@ resource "helm_release" "tekton-chains" {
   create_namespace = true
   force_update     = true
 }
-
-resource "google_container_registry" "registry" {
-  project  = var.PROJECT_ID
-  location = "US"
-}

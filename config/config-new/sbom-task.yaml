@@ -1,0 +1,69 @@
+# Copyright 2021 Chainguard, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: sbom-syft
+  labels:
+    attestations.chainguard.dev/predicate-type: sbom
+spec:
+  params:
+  - name: dev.chainguard.refresher.digest
+    type: string
+  - name: dev.chainguard.refresher.target-registry
+    type: string
+    default: ""
+  - name: dev.chainguard.refresher.fulcio-endpoint
+    type: string
+    default: "https://fulcio.sigstore.dev"
+  - name: dev.chainguard.refresher.rekor-endpoint
+    type: string
+    default: "https://rekor.sigstore.dev"
+  steps:
+  # This writes the generated SBOM to the workspace.
+  - name: generate-sbom
+    image: ghcr.io/vaikas/sbom-90f2914bafee4d6b1dedda57e666ff84@sha256:5281e87576a1a2855c91e0b44d32001f5a52fd9ca42906eb325b9f076ad944ec
+    args: [
+      "-format", "spdx",
+      "-file", "/workspace/image.sbom",
+      "-image", "$(params['dev.chainguard.refresher.digest'])"
+    ]
+  - name: publish-sbom
+    image: gcr.io/projectsigstore/cosign:v1.5.1
+    args: [
+      "attach", "sbom",
+      # Use workload identity to access images
+      "--k8s-keychain",
+      "--type", "spdx",
+      "--sbom", "/workspace/image.sbom",
+      "$(params['dev.chainguard.refresher.digest'])"
+    ]
+    env:
+    - name: SIGSTORE_ROOT_FILE
+      value: "/data/public"
+    - name: COSIGN_EXPERIMENTAL
+      value: "1"
+    - name: COSIGN_REPOSITORY
+      value: $(params["dev.chainguard.refresher.target-registry"])
+    volumeMounts:
+    - name: oidc-info
+      mountPath: /var/run/sigstore/cosign
+    - name: ctlog-public-key
+      mountPath: "/data"
+  volumes:
+  - name: oidc-info
+    projected:
+      sources:
+        - serviceAccountToken:
+            path: oidc-token
+            expirationSeconds: 600 # Use as short-lived as possible.
+            audience: sigstore
+  - name: fulcio-cert
+    secret:
+      secretName: fulcio-secret
+      items:
+        - key: private
+          path: key.pem
+        - key: cert
+          path: cert.pem
