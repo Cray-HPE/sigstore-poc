@@ -1,6 +1,6 @@
 KIND_CLUSTER_NAME=tekton-tf-dev
 KIND_LOG_LEVEL=6
-
+WORKSPACE_ID ?= $(shell cd terraform/ && terraform workspace show)
 include .env
 
 export
@@ -35,20 +35,20 @@ tf_get:
 # Target apply for the GKE cluster, it has to exist before helm provider can use it
 tf_target_plan:
 	cd terraform/ && \
-	terraform plan \
+	GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} terraform plan \
 	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
 	   	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
-        	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
+        	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" -var="workspace_id=${WORKSPACE_ID}" \
         	        		-var="config_context=${K8S_CONTEXT}" \
         		-target=google_container_cluster.primary -target=google_service_account.gke-user -target=google_project_iam_member.gcr_member
 
 tf_target_apply:
 	cd terraform/ && \
-	terraform apply \
+	GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} terraform apply \
 	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
 	   	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
         	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
-        	        		-var="config_context=${K8S_CONTEXT}" \
+        	        		-var="config_context=${K8S_CONTEXT}" -var="workspace_id=${WORKSPACE_ID}" \
         		-target=google_container_cluster.primary \
         		-target=google_service_account.gke-user \
         		-target=google_project_iam_member.gcr_member \
@@ -61,7 +61,7 @@ tf_plan: tf_target_plan
 	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
 	   	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
         	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
-        	        		-var="config_context=${K8S_CONTEXT}" \
+        	        		-var="config_context=${K8S_CONTEXT}" -var="workspace_id=${WORKSPACE_ID}" \
         		-out=plan.out
 
 tf_apply: tf_target_apply
@@ -69,7 +69,7 @@ tf_apply: tf_target_apply
 	terraform apply \
 	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
 	   	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
-        	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
+        	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" -var="workspace_id=${WORKSPACE_ID}" \
         		-var="config_context=${K8S_CONTEXT}" \
         	-auto-approve
 
@@ -82,6 +82,6 @@ tf_destroy:
 	terraform destroy \
 	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
 	   	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
-        	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
+        	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" -var="workspace_id=${WORKSPACE_ID}" \
         	        		-var="config_context=${K8S_CONTEXT}" \
 		-auto-approve

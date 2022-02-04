@@ -1,5 +1,5 @@
 resource "google_service_account" "gke-user" {
-  account_id   = "gke-user"
+  account_id   = "gke-user-${var.workspace_id}"
   display_name = "GKE Service Account"
   project      = var.PROJECT_ID
 }
@@ -11,7 +11,7 @@ resource "google_project_iam_member" "gcr_member" {
 }
 
 resource "google_service_account" "gke-workload" {
-  account_id   = "gke-user-workload"
+  account_id   = "${var.workspace_id}-user-workload"
   display_name = "GKE Service Account Workload user"
   project      = var.PROJECT_ID
 }
@@ -39,8 +39,11 @@ resource "kubernetes_service_account" "gcr" {
   }
 }
 
+variable "workspace_id" {
+  type = string
+}
 resource "google_container_cluster" "primary" {
-  name               = "chainguard-dev"
+  name               = "chainguard-dev-${var.workspace_id}"
   location           = var.CLUSTER_LOCATION != "" ? var.CLUSTER_LOCATION : var.DEFAULT_LOCATION
   project            = var.PROJECT_ID
   initial_node_count = 2
