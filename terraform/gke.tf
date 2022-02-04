@@ -4,30 +4,37 @@ resource "google_service_account" "gke-user" {
   project      = var.PROJECT_ID
 }
 
-resource "google_service_account_iam_binding" "service-account-iam" {
-  service_account_id = google_service_account.gke-user.name
-  role               = "roles/iam.serviceAccountUser"
-
-  members = [
-    "serviceAccount:${var.PROJECT_ID}.svc.id.goog[default/gke-user]"
-  ]
+resource "google_project_iam_member" "gcr_member" {
+  project = var.PROJECT_ID
+  role    = "roles/storage.objectViewer"
+  member  = "serviceAccount:${google_service_account.gke-user.email}"
 }
 
-resource "google_service_account_iam_binding" "workload-account-iam" {
-  service_account_id = google_service_account.gke-user.name
-  role               = "roles/iam.workloadIdentityUser"
-
-  members = [
-    "serviceAccount:${var.PROJECT_ID}.svc.id.goog[default/gke-user]"
-  ]
+resource "google_service_account" "gke-workload" {
+  account_id   = "gke-user-workload"
+  display_name = "GKE Service Account Workload user"
+  project      = var.PROJECT_ID
 }
 
+resource "google_service_account_iam_member" "workload-account-iam" {
+  role    = "roles/iam.workloadIdentityUser"
+  member  = "serviceAccount:${var.PROJECT_ID}.svc.id.goog[default/gke-user]"
+  service_account_id = google_service_account.gke-workload.name
+  depends_on = [google_service_account.gke-workload]
+}
+
+resource "google_project_iam_member" "storage_admin_member" {
+  project = var.PROJECT_ID
+  role    = "roles/storage.admin"
+  member  = "serviceAccount:${google_service_account.gke-workload.email}"
+  depends_on = [google_service_account.gke-workload]
+}
 
 resource "kubernetes_service_account" "gcr" {
   metadata {
     name = "gke-user"
     annotations = {
-      "iam.gke.io/gcp-service-account" = google_service_account.gke-user.name
+      "iam.gke.io/gcp-service-account" = google_service_account.gke-workload.email
     }
   }
 }
@@ -52,12 +59,6 @@ resource "google_container_cluster" "primary" {
   workload_identity_config {
     workload_pool = "${var.PROJECT_ID}.svc.id.goog"
   }
-}
-
-resource "google_project_iam_member" "gcr_member" {
-  project = var.PROJECT_ID
-  role    = "roles/storage.objectViewer"
-  member  = "serviceAccount:${google_service_account.gke-user.email}"
 }
 
 variable "PROJECT_ID" {

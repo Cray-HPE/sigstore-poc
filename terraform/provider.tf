@@ -1,11 +1,8 @@
-variable "config_context" {
-  default = "kind-tekton-tf-dev"
-}
-
 data "google_container_cluster" "primary" {
   depends_on = [google_container_cluster.primary]
   name       = google_container_cluster.primary.name
 }
+
 provider "helm" {
   kubernetes {
     host  = data.google_container_cluster.primary.endpoint

@@ -1,3 +1,7 @@
+variable "config_context" {
+  default = "kind-tekton-tf-dev"
+}
+
 variable "tk_pl_helm_chart_version" {
   default     = "v0.1.0"
   type        = string
