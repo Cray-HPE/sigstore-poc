@@ -301,8 +301,37 @@ kind: ServiceAccount
 metadata:
   name: createcerts
   namespace: fulcio-system
+  annotations:
+    iam.gke.io/gcp-service-account: default-user-workload@chainguard-dev.iam.gserviceaccount.com
+---
 
 ---
+# Copyright 2021 Chainguard, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: createcerts
+  namespace: fulcio-system
+spec:
+  template:
+    spec:
+      serviceAccountName: createcerts
+      restartPolicy: Never
+      automountServiceAccountToken: true
+      containers:
+        - name: createcerts
+          image: ghcr.io/vaikas/createcerts@sha256:8dbdd3e56273bee36449cddb6b8bc8ac7d4cda4408e7d396f6000b3c37106150
+          args: ["--secret=fulcio-secret"]
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+
+---
+
 # Copyright 2021 Chainguard, Inc.
 # SPDX-License-Identifier: Apache-2.0
 

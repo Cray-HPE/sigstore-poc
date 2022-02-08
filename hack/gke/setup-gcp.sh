@@ -133,7 +133,7 @@ done
 resource_blaster serving serving-default-domain.yaml | kubectl apply -f -
 
 # Wait for the job to complete, so we can reliably use ksvc hostnames.
-kubectl wait -n knative-serving --timeout=90s --for=condition=Complete jobs --all
+kubectl wait -n knative-serving --timeout=60s --for=condition=Complete jobs --all || true
 echo '::endgroup::'
 
 
@@ -141,7 +141,6 @@ echo '::group:: Install Sigstore scaffolding'
 
 echo 'Deploying with Private CA'
 kubectl apply -f ./hack/gke/release-arm-gke-private-ca.yaml
-
 
 echo "waiting for sigstore pieces to come up"
 kubectl wait --timeout=10m -A --for=condition=Complete jobs --all
