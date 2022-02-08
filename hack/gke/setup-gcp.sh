@@ -13,6 +13,7 @@ KNATIVE_VERSION="1.1.0"
 REGISTRY_NAME="registry.local"
 REGISTRY_PORT="5000"
 CLUSTER_SUFFIX="cluster.local"
+PRIVATE_CA=false
 NODE_COUNT="1"
 
 while [[ $# -ne 0 ]]; do
@@ -21,6 +22,10 @@ while [[ $# -ne 0 ]]; do
     --k8s-version)
       shift
       K8S_VERSION="$1"
+      ;;
+    --private-ca)
+          shift
+          PRIVATE_CA=true
       ;;
     --knative-version)
       shift
@@ -133,7 +138,11 @@ echo '::endgroup::'
 
 
 echo '::group:: Install Sigstore scaffolding'
-kubectl apply -f ./hack/gke/release-arm-gke.yaml
+
+echo 'Deploying with Private CA'
+kubectl apply -f ./hack/gke/release-arm-gke-private-ca.yaml
+
+
 echo "waiting for sigstore pieces to come up"
 kubectl wait --timeout=10m -A --for=condition=Complete jobs --all
 

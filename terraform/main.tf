@@ -6,7 +6,7 @@ resource "helm_release" "tekton_pipelines" {
   namespace        = var.tk_pl_namespace
   create_namespace = true
   force_update     = true
-  cleanup_on_fail = true
+  cleanup_on_fail  = true
 }
 
 
@@ -18,7 +18,7 @@ resource "helm_release" "tekton_dashboard" {
   namespace        = var.tk_pl_namespace
   create_namespace = false
   force_update     = true
-  cleanup_on_fail = true
+  cleanup_on_fail  = true
 }
 
 
@@ -30,5 +30,5 @@ resource "helm_release" "tekton_chains" {
   namespace        = var.tk_chains_namespace
   create_namespace = true
   force_update     = true
-  cleanup_on_fail = true
+  cleanup_on_fail  = true
 }

@@ -5,3 +5,4 @@ terraform/terraform.tfstate.backup
 terraform.tfstate.d/
 release-arm.yaml
 testrelease.yaml
+terraform/.terraform.tfstate.lock.info
