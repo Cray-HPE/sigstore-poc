@@ -4,6 +4,7 @@ metadata:
   name: workload-identity-test
   namespace: default
 spec:
+  serviceAccountName: gke-user
   containers:
     - image: google/cloud-sdk:slim
       name: workload-identity-test
@@ -19,4 +20,3 @@ spec:
               path: oidc-token
               expirationSeconds: 600 # Use as short-lived as possible.
               audience: sigstore
-  serviceAccountName: gke-user

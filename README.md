@@ -122,6 +122,12 @@ venv for the python that will then actually run them.
 
 # Once you've installed the bits above, you can install the config pieces.
 
+# Install Dockerfile that Kaniko will use to build the app image
+```bash
+kubectl create configmap dockerfile --from-file=./docker/build-python-app/Dockerfile
+```
+
+# Install all the tasks that we have produced
 ```shell
 kubectl apply -f ./config/common/
 ```
@@ -130,6 +136,8 @@ GKE
 ```shell
 kubectl apply -f ./config/gke/
 ```
+
+OR 
 
 Local
 ```shell
