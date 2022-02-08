@@ -8,4 +8,15 @@ spec:
     - image: google/cloud-sdk:slim
       name: workload-identity-test
       command: ["sleep","infinity"]
+      volumeMounts:
+        - name: oidc-info
+          mountPath: /var/run/sigstore/cosign
+  volumes:
+    - name: oidc-info
+      projected:
+        sources:
+          - serviceAccountToken:
+              path: oidc-token
+              expirationSeconds: 600 # Use as short-lived as possible.
+              audience: sigstore
   serviceAccountName: gke-user

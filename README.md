@@ -63,9 +63,9 @@ This will install knative services onto the cluster
 
 Then 
 
-Installs fulcio and rekor, with a mysql backend running the cluster via ./hack/release-arm-gke.yaml
+Installs fulcio and rekor, with a mysql backend running the cluster via ./hack/gke/release-arm-gke.yaml
 
-And finally test the installs with ./hack/testrelease-gke.yaml
+And finally test the installation with ./hack/gke/testrelease-gke.yaml
 
 Runs two jobs, one for checking the ctlog tree and one for verifying OIDC signing
 
@@ -93,6 +93,26 @@ tlog entry created with index: 0
 Pushing signature to: chainguard-dev/nginx 
 ```
 
+If there are any issues with the installation you can use ./hack/gke/test-gke-user.yaml 
+
+Testing rekor 
+
+```bash
+ curl http://rekor.rekor-system.svc/api/v1/log/
+{
+  "rootHash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "signedTreeHead":"Rekor\n0\n47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=\nTimestamp: 1644340477773818665\n\n— rekor.sigstore.dev LJZ0/DBFAiBkWCXKJWbDUzwozFh0HO8flMJu40Bdd5wpf/p2yF0brgIhAMx+Csi20A25zziQuacUaCKWBXpkG52Br0eKgcNrKzjI\n",
+  "treeSize":0
+}
+```
+
+Verifying OIDC token 
+
+```bash
+cat /var/run/sigstore/cosign/oidc-token
+SA_TOKEN_INFOMATION
+```
+
 # Tekton Overview
 
 We also have an image that we create. Idea is that it's a blessed python-slim
@@ -103,11 +123,19 @@ venv for the python that will then actually run them.
 # Once you've installed the bits above, you can install the config pieces.
 
 ```shell
-kubectl apply -f ./config/list-dependencies-task.yaml
-kubectl apply -f ./config/python-dependencies-task.yaml
-kubectl apply -f ./config/python-pipeline.yaml
-kubectl apply -f ./config/python-pipelinerun.yaml
+kubectl apply -f ./config/common/
 ```
+
+GKE 
+```shell
+kubectl apply -f ./config/gke/
+```
+
+Local
+```shell
+kubectl apply -f ./config/kind/
+```
+
 
 And then the pipeline should complete successfully, you can follow along:
 

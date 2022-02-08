@@ -133,14 +133,25 @@ echo '::endgroup::'
 
 
 echo '::group:: Install Sigstore scaffolding'
-kubectl apply -f ./hack/release-arm-gke.yaml
+kubectl apply -f ./hack/gke/release-arm-gke.yaml
 echo "waiting for sigstore pieces to come up"
 kubectl wait --timeout=10m -A --for=condition=Complete jobs --all
 
-echo "Running smoke test"
-kubectl get cm kube-root-ca.crt || kubectl -n ctlog-system get secrets ctlog-public-key -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
+kubectl delete -f ./hack/gke/testrelease-gke.yaml || true
 
-kubectl apply -f ./hack/testrelease-gke.yaml
+echo "Sleeping before starting smoke tests"
+secs=$((60))
+while [ $secs -gt 0 ]; do
+   echo -ne "$secs\033[0K\r"
+   sleep 1
+   : $((secs--))
+done
+
+echo "Running smoke test"
+
+kubectl delete secret/ctlog-public-key || true
+kubectl -n ctlog-system get secrets ctlog-public-key -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
+kubectl apply -f ./hack/gke/testrelease-gke.yaml
 kubectl wait --timeout=10m --for=condition=Complete jobs checktree
 echo '::endgroup:: Install Sigstore scaffolding'
 
@@ -162,6 +173,4 @@ kubectl patch configmap/chains-config \
 # Restart so picks up the changes.
 kubectl -n tekton-chains delete po -l app=tekton-chains-controller
 
-# Install the default task for fetching from github
-kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/main/task/git-clone/0.5/git-clone.yaml
 echo '::endgroup::'
