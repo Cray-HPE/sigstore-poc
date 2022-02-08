@@ -5,10 +5,9 @@ LABEL maintainer="vaikas@chainguard.dev"
 LABEL version="0.1"
 LABEL description="Build Python container"
 
-ARG venv_source=/workspace/source
 WORKDIR /app
 RUN echo "Running copy"
-#COPY ${venv_source} .
+COPY venv .
 RUN echo "Done running copy"
 ENV VIRTUAL_ENV=/app/venv
 RUN python3 -m venv $VIRTUAL_ENV
@@ -17,7 +16,7 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 RUN ls -lR /app
 # Copy the actual application source code here.
 # Need to add another workspace for it to be included.
-RUN echo 'print("hello222!")' > ./hello.py
+RUN echo 'print("hello world!")' > ./hello.py
 RUN ls ./
 RUN cat ./hello.py
 CMD ["python", "./hello.py"]
