@@ -10,6 +10,6 @@ spec:
       description: Where the dependencies are installed into
   steps:
     - name: copy-dockerfile
-      image: ghcr.io/vaikas/build-playground@sha256:5cc5b2d31abc2f42dbb9c78b1edb7abfd32235b94c0a640bdba7f353fcea9830
+      image: python:3.10-slim@sha256:ca2a31f21938f24bab02344bf846a90cc2bff5bd0e5a53b24b5dfcb4519ea8a3
       script: |
         cp $(workspaces.dockerfile-cm.path)/Dockerfile $(workspaces.dependencies.path)/Dockerfile
