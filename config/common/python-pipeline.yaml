@@ -1,0 +1,101 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: python-build-pipeline
+spec:
+  params:
+    - name: git-url
+    - name: git-revision
+    - name: pathToContext
+      description: The path to the build context, used by Kaniko - within the workspace
+      default: src
+    - name: imageUrl
+      description: Image name to create including repository
+    - name: imageTag
+      description: Image tag
+    - name: fulcio-endpoint
+      description: Fulcio endpoint
+      default: "fulcio.fulcio-system.svc"
+    - name: rekor-endpoint
+      description: Rekor endpoint
+      default: "rekor.rekor-system.svc"
+  workspaces:
+    - name: git-source
+    - name: dependencies
+    - name: dockerfile-cm
+  tasks:
+    - name: fetch-from-git
+      taskRef:
+        name: git-clone
+      params:
+        - name: url
+          value: $(params.git-url)
+        - name: revision
+          value: $(params.git-revision)
+      workspaces:
+        - name: output
+          workspace: git-source
+    - name: install-dependencies
+      runAfter:
+      - fetch-from-git
+      taskRef:
+        name: install-python-dependencies
+      workspaces:
+        - name: source
+          workspace: git-source
+        - name: dependencies
+          workspace: dependencies
+    - name: install-dockerfile
+      taskRef:
+        name: install-dockerfile
+      runAfter:
+      - install-dependencies
+      workspaces:
+      - name: dependencies
+        workspace: dependencies
+      - name: dockerfile-cm
+        workspace: dockerfile-cm
+    - name: list-dependencies
+      runAfter:
+      - install-dockerfile
+      taskRef:
+        name: list-dependencies
+      workspaces:
+        - name: dependencies
+          workspace: dependencies
+    - name: source-to-image
+      taskRef:
+        name: kaniko
+      runAfter:
+        - list-dependencies
+      workspaces:
+        - name: source
+          workspace: dependencies
+      params:
+        - name: IMAGE
+          value: $(params.imageUrl):$(params.imageTag)
+    - name: generate-sbom
+      taskRef:
+        name: sbom-syft
+      runAfter:
+        - source-to-image
+      params:
+        - name: dev.chainguard.refresher.digest
+          value: $(params.imageUrl)@$(tasks.source-to-image.results.IMAGE-DIGEST)
+        - name: dev.chainguard.refresher.rekor-endpoint
+          value: $(params.rekor-endpoint)
+        - name: dev.chainguard.refresher.fulcio-endpoint
+          value: $(params.fulcio-endpoint)
+    - name: trivy-scan
+      taskRef:
+        name: scan-trivy
+      runAfter:
+        - source-to-image
+      params:
+        - name: dev.chainguard.refresher.digest
+          value: $(params.imageUrl)@$(tasks.source-to-image.results.IMAGE-DIGEST)
+        - name: dev.chainguard.refresher.rekor-endpoint
+          value: $(params.rekor-endpoint)
+        - name: dev.chainguard.refresher.fulcio-endpoint
+          value: $(params.fulcio-endpoint)
+

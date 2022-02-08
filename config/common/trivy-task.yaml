@@ -56,9 +56,13 @@ spec:
       value: "1"
     - name: COSIGN_REPOSITORY
       value: $(params["dev.chainguard.refresher.target-registry"])
+    - name: SIGSTORE_CT_LOG_PUBLIC_KEY_FILE
+      value: /data/public
     volumeMounts:
     - name: oidc-info
       mountPath: /var/run/sigstore/cosign
+    - mountPath: /data
+      name: ctlog-public-key
   volumes:
   - name: oidc-info
     projected:
@@ -67,3 +71,9 @@ spec:
             path: oidc-token
             expirationSeconds: 600 # Use as short-lived as possible.
             audience: sigstore
+  - name: ctlog-public-key
+    secret:
+      items:
+      - key: public
+        path: public
+      secretName: ctlog-public-key
