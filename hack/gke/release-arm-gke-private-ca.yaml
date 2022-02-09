@@ -381,6 +381,8 @@ kind: ServiceAccount
 metadata:
   name: fulcio
   namespace: fulcio-system
+  annotations:
+    iam.gke.io/gcp-service-account: default-user-workload@chainguard-dev.iam.gserviceaccount.com
 ---
 apiVersion: serving.knative.dev/v1
 kind: Service

@@ -40,7 +40,7 @@ resource "google_project_iam_member" "storage_admin_member" {
 
 resource "google_project_iam_member" "private_ca_member" {
   project    = var.PROJECT_ID
-  role       = "roles/privateca.workloadCertificateRequester"
+  role       = "roles/privateca.admin"
   member     = "serviceAccount:${google_service_account.gke-workload.email}"
   depends_on = [google_service_account.gke-workload]
 }
