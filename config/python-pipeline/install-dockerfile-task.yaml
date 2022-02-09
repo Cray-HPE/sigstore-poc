@@ -1,0 +1,15 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: install-dockerfile
+spec:
+  workspaces:
+    - name: dockerfile-cm
+      description: Where the dockerfile comes from.
+    - name: dependencies
+      description: Where the dependencies are installed into
+  steps:
+    - name: copy-dockerfile
+      image: python:3.10-slim@sha256:ca2a31f21938f24bab02344bf846a90cc2bff5bd0e5a53b24b5dfcb4519ea8a3
+      script: |
+        cp $(workspaces.dockerfile-cm.path)/Dockerfile $(workspaces.dependencies.path)/Dockerfile

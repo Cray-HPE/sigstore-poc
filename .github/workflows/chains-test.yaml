@@ -1,0 +1,118 @@
+# Copyright 2022 Chainguard, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+name: Test Chains with cosign
+
+on:
+  pull_request:
+    branches: [ main ]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  chains-test:
+    name: Chains e2e tests
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write  # undocumented OIDC support.
+      packages: write
+      contents: read
+
+    steps:
+    - name: Check out our repo
+      uses: actions/checkout@v2
+
+    - name: Setup Cluster
+      run: |
+        ./hack/setup-kind.sh
+
+    - name: Install all the everythings
+      timeout-minutes: 10
+      run: |
+        # Install the Dockerfile as configmap for 'install-dockerfile-task'
+        kubectl create configmap dockerfile --from-file=./docker/build-python-app/Dockerfile
+
+        # Install kaniko task
+        kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/v1beta1/kaniko/kaniko.yaml
+
+        kubectl apply -f ./config/python-pipeline/list-dependencies-task.yaml
+        kubectl apply -f ./config/python-pipeline/install-dockerfile-task.yaml
+        kubectl apply -f ./config/python-pipeline/python-dependencies-task.yaml
+        kubectl apply -f ./config/python-pipeline/sbom-task.yaml
+        kubectl apply -f ./config/python-pipeline/trivy-task.yaml
+
+        # Then install the pipeline
+        kubectl apply -f ./config/python-pipeline/python-pipeline.yaml
+        # And run it
+        kubectl apply -f ./config/python-pipeline/python-pipelinerun-kind.yaml
+
+        # Give s a little time for things to spin up
+        sleep 5
+
+        echo "Waiting for the pipelinerun to complete..."
+        kubectl wait --timeout 15m --for=condition=Succeeded pipelineruns --all
+
+    - name: Collect Taskrun diagnostics
+      if: ${{ failure() }}
+      run: |
+        for x in $(kubectl get taskruns -oname); do
+          echo "::group:: describe $x"
+          kubectl describe $x
+          echo '::endgroup::'
+        done
+
+    - name: Collect Pipeline diagnostics
+      if: ${{ failure() }}
+      run: |
+        for x in $(kubectl get pipelines -oname); do
+          echo "::group:: describe $x"
+          kubectl describe $x
+          echo '::endgroup::'
+        done
+
+    - name: Collect Pipelineruns diagnostics
+      if: ${{ failure() }}
+      run: |
+        for x in $(kubectl get pipelineruns -oname); do
+          echo "::group:: describe $x"
+          kubectl describe $x
+          echo '::endgroup::'
+        done
+
+    - name: Collect node diagnostics
+      if: ${{ failure() }}
+      run: |
+        for x in $(kubectl get nodes -oname); do
+          echo "::group:: describe $x"
+          kubectl describe $x
+          echo '::endgroup::'
+        done
+
+    - name: Collect pod diagnostics
+      if: ${{ failure() }}
+      run: |
+        for ns in fulcio-system rekor-system trillian-system ctlog-system; do
+          kubectl get pods -n${ns}
+
+          for x in $(kubectl get pods -n${ns} -oname); do
+            echo "::group:: describe $x"
+            kubectl describe -n${ns} $x
+            echo '::endgroup::'
+          done
+        done
+
+    - name: Collect logs
+      if: ${{ failure() }}
+      run: |
+        mkdir -p /tmp/logs
+        kind export logs /tmp/logs
+
+    - name: Upload artifacts
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v2
+      with:
+        name: logs
+        path: /tmp/logs
