@@ -1,7 +1,7 @@
-# build-playground
+# Sigstore HPE POC 
 
-Playground for building an example e2e pipeline using Tekton Pipelines / Chains
-for Python.
+Playground for building an example e2e pipeline using Tekton Pipelines, Chains, Dashboard, Sigstore Rekor, Cosign and Fulcio
+for Python and Kind and/or GCP/GKE.
 
 **NOTE** sbom/trivy tasks do not work on arm without fetching a
 [tekton pipelines update](https://github.com/tektoncd/pipeline/issues/4548)
@@ -11,7 +11,19 @@ for Python.
 
 # Get started
 
-## Local Development 
+1. Setup Kubernetes Cluster 
+2. Install Tekton Pipelines, Chains, and Dashboards
+3. Install Rekor and Fulcio 
+4. Run Python builds through Pipelines
+   1. Build, Dependencies
+   2. Container creation
+   3. SBOM creation
+   4. Trivy CVE Scanning 
+5. Verify results with Cosign
+ 
+## Kubernetes Cluster
+
+### Local Development 
 
 ```shell
 ./hack/kind/setup-kind.sh
@@ -24,7 +36,7 @@ This will set up a kind cluster on your machine with:
  * Tekton Chains / Pipelines
  * Tekton task for fetching GitHub sources
 
-## GCP Development 
+### GCP Development 
 
 Create the GKE Cluster, install Tekton Pipelines, Dashboard and Chains
 
@@ -144,29 +156,6 @@ docker rm -f b1e3f3238f7a
 ```
 
 
-kubectl apply -f ./config/common
-
-kubectl apply -f ./config/common
-task.tekton.dev/git-clone configured
-task.tekton.dev/install-dockerfile created
-task.tekton.dev/kaniko created
-task.tekton.dev/list-dependencies created
-task.tekton.dev/install-python-dependencies created
-pipeline.tekton.dev/python-build-pipeline created
-task.tekton.dev/sbom-syft created
-task.tekton.dev/scan-trivy created
-
- kubectl apply -f ./config/kind/
- 
-
- persistentvolumeclaim/shared-task-storage created
- persistentvolumeclaim/python-dependencies-storage created
- pipelinerun.tekton.dev/bare-build-pipeline-run created
-
-kubectl get pipelineruns
-NAME                      SUCCEEDED   REASON    STARTTIME   COMPLETIONTIME
-bare-build-pipeline-run   Unknown     Running   29s
-
 ### Network access
 
 Setup port forwarding:
@@ -218,7 +207,16 @@ kubectl create configmap dockerfile --from-file=./docker/python/Dockerfile
 # Install all the tasks that we have produced
 ```shell
 kubectl apply -f ./config/common/
+task.tekton.dev/git-clone configured
+task.tekton.dev/install-dockerfile created
+task.tekton.dev/kaniko created
+task.tekton.dev/list-dependencies created
+task.tekton.dev/install-python-dependencies created
+pipeline.tekton.dev/python-build-pipeline created
+task.tekton.dev/sbom-syft created
+task.tekton.dev/scan-trivy created
 ```
+
 
 GKE 
 ```shell

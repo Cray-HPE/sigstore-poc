@@ -37,41 +37,45 @@ tf_target_plan:
 	cd terraform/ && \
 	GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} terraform plan \
 	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
-	   	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
-        	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" -var="workspace_id=${WORKSPACE_ID}" \
-        	        		-var="config_context=${K8S_CONTEXT}" \
-        		-target=google_container_cluster.primary -target=google_service_account.gke-user -target=google_project_iam_member.gcr_member
+	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
+	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
+	-var="workspace_id=${WORKSPACE_ID}" \
+	-var="config_context=${K8S_CONTEXT}" \
+	-target=google_container_cluster.primary \
+	-target=google_service_account.gke-user \
+	-target=google_project_iam_member.gcr_member
 
 tf_target_apply:
 	cd terraform/ && \
 	GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} terraform apply \
 	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
-	   	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
-        	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
-        	        		-var="config_context=${K8S_CONTEXT}" -var="workspace_id=${WORKSPACE_ID}" \
-        		-target=google_container_cluster.primary \
-        		-target=google_service_account.gke-user \
-        		-target=google_project_iam_member.gcr_member \
-        		-auto-approve
+	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
+	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
+	-var="config_context=${K8S_CONTEXT}" -var="workspace_id=${WORKSPACE_ID}" \
+	-target=google_container_cluster.primary \
+	-target=google_service_account.gke-user \
+	-target=google_project_iam_member.gcr_member \
+	-auto-approve
 
 
 tf_plan: tf_target_plan
 	cd terraform/ && \
 	terraform plan \
 	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
-	   	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
-        	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
-        	        		-var="config_context=${K8S_CONTEXT}" -var="workspace_id=${WORKSPACE_ID}" \
-        		-out=plan.out
+	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
+	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
+	-var="config_context=${K8S_CONTEXT}" -var="workspace_id=${WORKSPACE_ID}" \
+	-out=plan.out
 
 tf_apply: tf_target_apply
 	cd terraform/ && \
 	terraform apply \
 	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
-	   	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
-        	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" -var="workspace_id=${WORKSPACE_ID}" \
-        		-var="config_context=${K8S_CONTEXT}" \
-        	-auto-approve
+	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
+	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
+	-var="workspace_id=${WORKSPACE_ID}" \
+	-var="config_context=${K8S_CONTEXT}" \
+	-auto-approve
 
 tf_fmt:
 	cd terraform/ && \
@@ -81,7 +85,8 @@ tf_destroy:
 	cd terraform/ && \
 	terraform destroy \
 	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
-	   	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
-        	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" -var="workspace_id=${WORKSPACE_ID}" \
-        	        		-var="config_context=${K8S_CONTEXT}" \
-		-auto-approve
+	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
+	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
+	-var="workspace_id=${WORKSPACE_ID}" \
+	-var="config_context=${K8S_CONTEXT}" \
+	-auto-approve
