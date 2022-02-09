@@ -15,10 +15,10 @@ spec:
       description: Image tag
     - name: fulcio-endpoint
       description: Fulcio endpoint
-      default: "fulcio.fulcio-system.svc"
+      default: "http://fulcio.fulcio-system.svc"
     - name: rekor-endpoint
       description: Rekor endpoint
-      default: "rekor.rekor-system.svc"
+      default: "http://rekor.rekor-system.svc"
   workspaces:
     - name: git-source
     - name: dependencies

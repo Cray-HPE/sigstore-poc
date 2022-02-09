@@ -1,16 +1,29 @@
 #!/usr/bin/env bash
 
-# Copyright 2021 Chainguard, Inc.
+# Copyright 2022 Chainguard, Inc.
 # SPDX-License-Identifier: Apache-2.0
 
 set -o errexit
 set -o nounset
 set -o pipefail
 
-#if [[ -z "${GITHUB_WORKSPACE}" ]]; then
-#  echo "This script is expected to run in the context of GitHub Actions."
-#  exit 1
-#fi
+THIS_OS="$(uname -s)"
+THIS_HW="$(uname -m)"
+echo "RUNNING ON ${THIS_OS}"
+if [ ${THIS_OS} == "Darwin" ]; then
+  echo "Running on Darwin"
+  RUNNING_ON_MAC="true"
+else
+  RUNNING_ON_MAC="false"
+fi
+
+if [ ${THIS_HW} == "arm64" ]; then
+  RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.14/release-arm.yaml"
+else
+  RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.14/release.yaml"
+fi
+
+TEST_RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.14/testrelease.yaml"
 
 # Defaults
 K8S_VERSION="v1.21.x"
@@ -73,20 +86,26 @@ esac
 #############################################################
 echo '::group:: Install KinD'
 
-# Disable swap otherwise memory enforcement does not work
-# See: https://kubernetes.slack.com/archives/CEKK1KTN2/p1600009955324200
-sudo swapoff -a
-sudo rm -f /swapfile
+EXTRA_MOUNT=""
+# This does not work on mac, so skip.
+if [ ${RUNNING_ON_MAC} == "false" ]; then
+  # Disable swap otherwise memory enforcement does not work
+  # See: https://kubernetes.slack.com/archives/CEKK1KTN2/p1600009955324200
+  sudo swapoff -a
+  sudo rm -f /swapfile
+  # Use in-memory storage to avoid etcd server timeouts.
+  # https://kubernetes.slack.com/archives/CEKK1KTN2/p1615134111016300
+  # https://github.com/kubernetes-sigs/kind/issues/845
+  sudo mkdir -p /tmp/etcd
+  sudo mount -t tmpfs tmpfs /tmp/etcd
+fi
 
-# Use in-memory storage to avoid etcd server timeouts.
-# https://kubernetes.slack.com/archives/CEKK1KTN2/p1615134111016300
-# https://github.com/kubernetes-sigs/kind/issues/845
-sudo mkdir -p /tmp/etcd
-sudo mount -t tmpfs tmpfs /tmp/etcd
-
-curl -Lo ./kind "https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-$(uname)-amd64"
-chmod +x ./kind
-sudo mv kind /usr/local/bin
+if ! command -v kind &> /dev/null; then
+  echo ":: Installing Kind ::"
+  curl -Lo ./kind "https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-$(uname)-${THIS_HW}"
+  chmod +x ./kind
+  sudo mv kind /usr/local/bin
+fi
 
 echo '::endgroup::'
 
@@ -104,9 +123,15 @@ kind: Cluster
 nodes:
 - role: control-plane
   image: "${KIND_IMAGE}"
+EOF
+if [ ${RUNNING_ON_MAC} == "false" ]; then
+  cat >> kind.yaml <<EOF_2
   extraMounts:
   - containerPath: /var/lib/etcd
     hostPath: /tmp/etcd
+EOF_2
+fi
+cat >> kind.yaml <<EOF_3
 - role: worker
   image: "${KIND_IMAGE}"
 
@@ -127,12 +152,13 @@ kubeadmConfigPatches:
     apiServer:
       extraArgs:
         "service-account-issuer": "https://kubernetes.default.svc"
-        "service-account-signing-key-file": "/etc/kubernetes/pki/sa.key"
-        "service-account-jwks-uri": "https://kubernetes.default.svc/openid/v1/jwks"
         "service-account-key-file": "/etc/kubernetes/pki/sa.pub"
+        "service-account-signing-key-file": "/etc/kubernetes/pki/sa.key"
+        "service-account-api-audiences": "api,spire-server"
+        "service-account-jwks-uri": "https://kubernetes.default.svc/openid/v1/jwks"
     networking:
       dnsDomain: "${CLUSTER_SUFFIX}"
-EOF
+EOF_3
 
 cat kind.yaml
 echo '::endgroup::'
@@ -286,18 +312,24 @@ kubectl wait -n knative-serving --timeout=90s --for=condition=Complete jobs --al
 echo '::endgroup::'
 
 echo '::group:: Install Sigstore scaffolding'
-curl -L https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.12-alpha/release.yaml | kubectl apply -f -
+curl -L ${RELEASE} | kubectl apply -f -
 echo "waiting for sigstore pieces to come up"
-kubectl wait --timeout=10m -A --for=condition=Complete jobs --all
+kubectl wait --timeout=15m -A --for=condition=Complete jobs --all
 
 echo "Running smoke test"
+# Make a copy of the CT Log public key so that we can use it to
+# validate the SCT coming from Fulcio.
 kubectl -n ctlog-system get secrets ctlog-public-key -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
-curl -L https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.12-alpha/testrelease.yaml | kubectl apply -f -
-kubectl wait --timeout=5m --for=condition=Complete jobs checktree
+kubectl apply -f ${TEST_RELEASE}
+kubectl wait --timeout=15m --for=condition=Complete jobs checktree check-oidc
 echo '::endgroup:: Install Sigstore scaffolding'
 
 echo '::group:: Install Tekton Pipelines and chains'
-kubectl apply --filename https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml
+while ! kubectl apply --filename https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml
+do
+  echo "waiting for tekton pipelines to get installed"
+  sleep 2
+done
 
 # Disable affinity-assistance so that we can mount multiple volumes for in/out
 kubectl patch configmap/feature-flags \
@@ -308,13 +340,25 @@ kubectl patch configmap/feature-flags \
 # Restart so picks up the changes.
 kubectl -n tekton-pipelines delete po -l app=tekton-pipelines-controller
 
-kubectl apply --filename https://storage.googleapis.com/tekton-releases/chains/latest/release.yaml
+while ! kubectl apply --filename https://storage.googleapis.com/tekton-releases/chains/latest/release.yaml
+do
+  echo "waiting for tekton chains to get installed"
+  sleep 2
+done
+
 kubectl patch configmap/chains-config \
 --namespace tekton-chains \
 --type merge \
---patch '{"data":{"artifacts.oci.format": "simplesigning", "artifacts.oci.storage": "tekton", "artifacts.taskrun.format": "in-toto", "signers.x509.fulcio.address": "http://fulcio.fulcio-system.svc", "signers.x509.fulcio.enabled": "true", "transparency.enabled": "true", "transparency.url": "http://rekor.rekor-system.svc"}}'
+--patch '{"data":{"artifacts.oci.format": "simplesigning", "artifacts.oci.storage": "oci", "artifacts.taskrun.format": "in-toto", "signers.x509.fulcio.address": "http://fulcio.fulcio-system.svc", "signers.x509.fulcio.enabled": "true", "transparency.enabled": "true", "transparency.url": "http://rekor.rekor-system.svc"}}'
 
 # Restart so picks up the changes.
 kubectl -n tekton-chains delete po -l app=tekton-chains-controller
+
+# Install task that fetches from github
+while ! kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/main/task/git-clone/0.5/git-clone.yaml
+do
+  echo "waiting for git-clone tekton task to get installed"
+  sleep 2
+done
 
 echo '::endgroup::'

@@ -180,5 +180,4 @@ kubectl patch configmap/chains-config \
 
 # Restart so picks up the changes.
 kubectl -n tekton-chains delete po -l app=tekton-chains-controller
-
 echo '::endgroup::'
