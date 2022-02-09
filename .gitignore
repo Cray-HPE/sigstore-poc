@@ -8,3 +8,4 @@ testrelease.yaml
 terraform/.terraform.tfstate.lock.info
 ctlog-public.pem
 fulcio-public.pem
+kind.yaml

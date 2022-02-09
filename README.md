@@ -67,6 +67,9 @@ Installs fulcio and rekor, with a mysql backend running the cluster via ./hack/g
 And finally test the installation with ./hack/gke/testrelease-gke.yaml which Runs two jobs, one for checking the 
 ctlog tree and one for verifying OIDC signing.
 
+
+### Verify Sigstore installs 
+
 ```bash
  kubectl get pods
 NAME               READY   STATUS      RESTARTS   AGE
@@ -112,7 +115,7 @@ SA_TOKEN_INFOMATION
 ```
 
 # Tekton Overview
-=======
+
 **NOTE** For Macs the airplay receiver uses the 5000 port and may need to be
 disabled, details [here](https://developer.apple.com/forums/thread/682332).
 Alternatively, you can manually modify the script and change the
@@ -140,39 +143,34 @@ So that's the running version of the registry, so remove it:
 docker rm -f b1e3f3238f7a
 ```
 
-# Overview
 
-We also have an image that we create. Idea is that it's a blessed python-slim
-version that will only be used to install the requirements. After the
-installation completes, we grab the dependencies and just copy them to the
-venv for the python that will then actually run them.
+kubectl apply -f ./config/common
 
-### Certificates
+kubectl apply -f ./config/common
+task.tekton.dev/git-clone configured
+task.tekton.dev/install-dockerfile created
+task.tekton.dev/kaniko created
+task.tekton.dev/list-dependencies created
+task.tekton.dev/install-python-dependencies created
+pipeline.tekton.dev/python-build-pipeline created
+task.tekton.dev/sbom-syft created
+task.tekton.dev/scan-trivy created
 
-There are two certificates that we need, CT Log and Fulcio root certs. Note that
-if you are switching back and forth between public / your instance, you might
-not want to export these variables as hilarity will ensue.
+ kubectl apply -f ./config/kind/
+ 
 
-CT Log:
-```shell
-kubectl -n ctlog-system get secrets ctlog-public-key -o=jsonpath='{.data.public}' | base64 -d > ./ctlog-public.pem
-export SIGSTORE_CT_LOG_PUBLIC_KEY_FILE=./ctlog-public.pem
-```
+ persistentvolumeclaim/shared-task-storage created
+ persistentvolumeclaim/python-dependencies-storage created
+ pipelinerun.tekton.dev/bare-build-pipeline-run created
 
-Fulcio root:
-```shell
-kubectl -n fulcio-system get secrets fulcio-secret -ojsonpath='{.data.cert}' | base64 -d > ./fulcio-root.pem
-export SIGSTORE_ROOT_FILE=./fulcio-root.pem
-```
+kubectl get pipelineruns
+NAME                      SUCCEEDED   REASON    STARTTIME   COMPLETIONTIME
+bare-build-pipeline-run   Unknown     Running   29s
 
 ### Network access
 
 Setup port forwarding:
 
-# Install Dockerfile that Kaniko will use to build the app image
-```bash
-kubectl create configmap dockerfile --from-file=./docker/python/Dockerfile
-```
 
 ```shell
 kubectl -n kourier-system port-forward service/kourier-internal 8080:80 &
@@ -211,6 +209,12 @@ pipeline pieces. This is very rough beginning of a proper Python pipeline and is
 meant to demonstrate breaking the large build into multiple steps and providing
 attestations at each level via Tekton Chains.
 
+# Install Dockerfile that Kaniko will use to build the app image
+```bash
+kubectl create configmap dockerfile --from-file=./docker/python/Dockerfile
+```
+
+
 # Install all the tasks that we have produced
 ```shell
 kubectl apply -f ./config/common/
@@ -232,7 +236,14 @@ kubectl apply -f ./config/kind/
 And then the pipeline should complete successfully, you can follow along:
 
 ```shell
-kubectl get pipelineruns -w
+kubectl get pipelineruns
+NAME                      SUCCEEDED   REASON    STARTTIME   COMPLETIONTIME
+bare-build-pipeline-run   Unknown     Running   29s    
+```
+
+You can view the logs of the pipeline run with [tkn cli](https://tekton.dev/docs/cli/)
+```shell
+tkn pipelineruns logs bare-build-pipeline-run -w
 ```
 
 If you have tekton dashboard installed 
@@ -242,9 +253,41 @@ kubectl port-forward svc/tekton-dashboard 9097:9097 -n tekton-pipelines
 ```
 
 ![](images/tekton-dashboards.png)
-=======
+
+When the pipeline finishes you see this in the logs
+
+```shell
+[source-to-image : build-and-push] INFO[0008] Pushing image to registry.local:5000/knative/pythontest:0.1 
+[source-to-image : build-and-push] INFO[0010] Pushed image to 1 destinations               
+
+
+[source-to-image : digest-to-results] sha256:824e9a8a00d5915bc87e25316dfbb19dbcae292970b02a464e2da1a665c7d54b
+```
 
 # Inspect results
+
+We also have an image that we create. Idea is that it's a blessed python-slim
+version that will only be used to install the requirements. After the
+installation completes, we grab the dependencies and just copy them to the
+venv for the python that will then actually run them.
+
+### Certificates
+
+There are two certificates that we need, CT Log and Fulcio root certs. Note that
+if you are switching back and forth between public / your instance, you might
+not want to export these variables as hilarity will ensue.
+
+CT Log:
+```shell
+kubectl -n ctlog-system get secrets ctlog-public-key -o=jsonpath='{.data.public}' | base64 -d > ./ctlog-public.pem
+export SIGSTORE_CT_LOG_PUBLIC_KEY_FILE=./ctlog-public.pem
+```
+
+Fulcio root:
+```shell
+kubectl -n fulcio-system get secrets fulcio-secret -ojsonpath='{.data.cert}' | base64 -d > ./fulcio-root.pem
+export SIGSTORE_ROOT_FILE=./fulcio-root.pem
+```
 
 
 Grab the image that was produced
@@ -265,6 +308,7 @@ build-pipeline-run-source-to-image           False       Failed      4h12m      
 ```
 
 The Source to image task will produce the image id of the container it built and push to the registry
+
 
 ```shell
 IMAGE_ID=$(kubectl get taskruns build-pipeline-run-f57dc-source-to-image -o jsonpath='{.spec.params[0].value}' | sed 's/:0.1//')@$(kubectl get taskruns build-pipeline-run-f57dc-source-to-image -o jsonpath='{.status.taskResults[0].value}')

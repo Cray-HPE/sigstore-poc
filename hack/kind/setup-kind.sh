@@ -120,6 +120,7 @@ echo '::group:: Build KinD Config'
 cat > kind.yaml <<EOF
 apiVersion: kind.x-k8s.io/v1alpha4
 kind: Cluster
+name: sigstore
 nodes:
 - role: control-plane
   image: "${KIND_IMAGE}"
@@ -163,6 +164,7 @@ EOF_3
 cat kind.yaml
 echo '::endgroup::'
 
+kind delete cluster --name sigstore
 echo '::group:: Create KinD Cluster'
 kind create cluster --config kind.yaml --wait 5m
 
@@ -354,11 +356,9 @@ kubectl patch configmap/chains-config \
 # Restart so picks up the changes.
 kubectl -n tekton-chains delete po -l app=tekton-chains-controller
 
-# Install task that fetches from github
-while ! kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/main/task/git-clone/0.5/git-clone.yaml
+while ! kubectl apply --filename kubectl apply --filename https://storage.googleapis.com/tekton-releases/dashboard/latest/tekton-dashboard-release.yaml
 do
-  echo "waiting for git-clone tekton task to get installed"
+  echo "waiting for tekton dashboard to get installed"
   sleep 2
 done
-
 echo '::endgroup::'
