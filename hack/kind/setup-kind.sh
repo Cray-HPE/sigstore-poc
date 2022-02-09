@@ -10,14 +10,14 @@ set -o pipefail
 THIS_OS="$(uname -s)"
 THIS_HW="$(uname -m)"
 echo "RUNNING ON ${THIS_OS}"
-if [ ${THIS_OS} == "Darwin" ]; then
+if [ "${THIS_OS}" == "Darwin" ]; then
   echo "Running on Darwin"
   RUNNING_ON_MAC="true"
 else
   RUNNING_ON_MAC="false"
 fi
 
-if [ ${THIS_HW} == "arm64" ]; then
+if [ "${THIS_HW}" == "arm64" ]; then
   RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.14/release-arm.yaml"
 else
   RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.14/release.yaml"
@@ -264,7 +264,7 @@ kubectl patch configmap/config-network \
 
 # Wait for Knative to be ready (or webhook will reject SaaS)
 for x in $(kubectl get deploy --namespace knative-serving -oname); do
-  kubectl rollout status --timeout 5m --namespace knative-serving $x
+  kubectl rollout status --timeout 5m --namespace knative-serving "${x}"
 done
 
 # Enable the features we need that are currently feature-flagged in Knative.

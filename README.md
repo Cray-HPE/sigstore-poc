@@ -14,7 +14,7 @@ for Python.
 ## Local Development 
 
 ```shell
-./hack/setup-kind.sh
+./hack/kind/setup-kind.sh
 ```
 
 This will set up a kind cluster on your machine with:
