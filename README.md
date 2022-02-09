@@ -22,7 +22,7 @@ This will set up a kind cluster on your machine with:
  * Knative serving
  * Sigstore (rekor, fulcio, etc.)
  * Tekton Chains / Pipelines
- * Tekton task for fetching github sources
+ * Tekton task for fetching GitHub sources
 
 ## GCP Development 
 
@@ -35,6 +35,7 @@ make tf_init tf_plan tf_apply
 Let's make sure we are running on the GKE cluster we just created, switch kubectl context
 
 ```bash
+gcloud auth login
 gcloud container clusters list
 NAME                 LOCATION    MASTER_VERSION   MASTER_IP       MACHINE_TYPE   NODE_VERSION     NUM_NODES  STATUS
 chainguard-dev       us-east1-b  1.21.6-gke.1500  35.229.115.236  n1-standard-4  1.21.6-gke.1500  2          RUNNING
@@ -113,7 +114,7 @@ SA_TOKEN_INFOMATION
 # Tekton Overview
 =======
 **NOTE** For Macs the airplay receiver uses the 5000 port and may need to be
-disabled, details [here](https://developer.apple.com/forums/thread/682332)).
+disabled, details [here](https://developer.apple.com/forums/thread/682332).
 Alternatively, you can manually modify the script and change the
 [REGISTRY_PORT](https://github.com/vaikas/sigstore-scaffolding/blob/main/hack/setup-mac-kind.sh#L19)
 
@@ -303,10 +304,4 @@ The following checks were performed on each of these signatures:
   - The claims were present in the transparency log
   - The signatures were integrated into the transparency log when the certificate was valid
   - Any certificates were verified against the Fulcio roots.
-```
-
-Create your own attestation. For this to work you need to update cm fulcio-config
-in fulcio-system by adding support for other oauth issuers. TODO(vaikas): Update sigstore-scaffolding to support them.
-```shell
-SIGSTORE_CT_LOG_PUBLIC_KEY_FILE=./ctlog-public.pem SIGSTORE_ROOT_FILE=./fulcio-public.pem COSIGN_EXPERIMENTAL=1 cosign attest --allow-insecure-registry --force --fulcio-url=http://fulcio.fulcio-system.svc:8080 --rekor-url=http://rekor.rekor-system.svc:8080 --predicate /tmp/registry.logs $IMAGE_ID
 ```

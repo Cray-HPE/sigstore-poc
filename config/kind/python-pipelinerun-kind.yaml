@@ -31,12 +31,9 @@ spec:
   params:
     - name: git-url
       value: "https://github.com/Cray-HPE/csm.git"
-      #value: "https://github.com/vaikas/build-playground.git"
     - name: git-revision
       value: "main"
     - name: imageUrl
-      # Since this runs on kind, use this as target
-      # value: "gchr.io/vaikas/build-playground/pythontest"
       value: "registry.local:5000/knative/pythontest"
     - name: imageTag
       value: "0.1"

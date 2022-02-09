@@ -27,7 +27,7 @@ jobs:
 
     - name: Setup Cluster
       run: |
-        ./hack/kind/etup-kind.sh
+        ./hack/kind/setup-kind.sh
 
     - name: Install all the everythings
       timeout-minutes: 10

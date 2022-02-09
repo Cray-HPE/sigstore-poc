@@ -32,7 +32,6 @@ spec:
   params:
     - name: git-url
       value: "https://github.com/Cray-HPE/csm.git"
-      #value: "https://github.com/vaikas/build-playground.git"
     - name: git-revision
       value: "main"
     - name: imageUrl
