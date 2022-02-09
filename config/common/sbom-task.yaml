@@ -67,3 +67,9 @@ spec:
           path: key.pem
         - key: cert
           path: cert.pem
+  - name: ctlog-public-key
+    secret:
+      secretName: ctlog-public-key
+      items:
+        - key: public
+          path: rootfile.pem

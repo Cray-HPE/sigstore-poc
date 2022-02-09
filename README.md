@@ -124,7 +124,7 @@ venv for the python that will then actually run them.
 
 # Install Dockerfile that Kaniko will use to build the app image
 ```bash
-kubectl create configmap dockerfile --from-file=./docker/build-python-app/Dockerfile
+kubectl create configmap dockerfile --from-file=./docker/build-app/Dockerfile
 ```
 
 # Install all the tasks that we have produced

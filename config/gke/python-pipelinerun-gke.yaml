@@ -40,9 +40,9 @@ spec:
     - name: imageTag
       value: "0.1"
     - name: fulcio-endpoint
-      value: "fulcio.fulcio-system.svc"
+      value: "http://fulcio.fulcio-system.svc"
     - name: rekor-endpoint
-      value: "rekor.rekor-system.svc"
+      value: "http://rekor.rekor-system.svc"
   pipelineRef:
     name: python-build-pipeline
   workspaces:
