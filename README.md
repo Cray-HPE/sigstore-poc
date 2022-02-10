@@ -133,7 +133,7 @@ disabled, details [here](https://developer.apple.com/forums/thread/682332).
 Alternatively, you can manually modify the script and change the
 [REGISTRY_PORT](https://github.com/vaikas/sigstore-scaffolding/blob/main/hack/setup-mac-kind.sh#L19)
 
-*NOTE* You may have to uninstall the docker registry container between running
+**NOTE** You may have to uninstall the docker registry container between running
 the above scripts because it spins up a registry container in a daemon mode.
 To clean a previously running registry, you can do one of these:
 
@@ -198,13 +198,12 @@ pipeline pieces. This is very rough beginning of a proper Python pipeline and is
 meant to demonstrate breaking the large build into multiple steps and providing
 attestations at each level via Tekton Chains.
 
-# Install Dockerfile that Kaniko will use to build the app image
+#### Install Dockerfile that Kaniko will use to build the app image
 ```bash
 kubectl create configmap dockerfile --from-file=./docker/python/Dockerfile
 ```
 
-
-# Install all the tasks that we have produced
+#### Install all the tasks that we have produced
 ```shell
 kubectl apply -f ./config/common/
 task.tekton.dev/git-clone configured
@@ -216,7 +215,6 @@ pipeline.tekton.dev/python-build-pipeline created
 task.tekton.dev/sbom-syft created
 task.tekton.dev/scan-trivy created
 ```
-
 
 GKE 
 ```shell
