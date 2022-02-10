@@ -58,7 +58,7 @@ tf_target_apply:
 	-auto-approve
 
 
-tf_plan: tf_target_plan
+tf_plan:
 	cd terraform/ && \
 	terraform plan \
 	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
@@ -67,7 +67,7 @@ tf_plan: tf_target_plan
 	-var="config_context=${K8S_CONTEXT}" -var="workspace_id=${WORKSPACE_ID}" \
 	-out=plan.out
 
-tf_apply: tf_target_apply
+tf_apply:
 	cd terraform/ && \
 	terraform apply \
 	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
@@ -80,6 +80,19 @@ tf_apply: tf_target_apply
 tf_fmt:
 	cd terraform/ && \
 	terraform fmt
+
+tf_target_destroy:
+		cd terraform/ && \
+    	terraform destroy \
+    	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
+    	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
+    	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
+    	-var="workspace_id=${WORKSPACE_ID}" \
+    	-var="config_context=${K8S_CONTEXT}" \
+		-target=google_container_cluster.primary \
+		-target=google_service_account.gke-user \
+		-target=google_project_iam_member.gcr_member \
+    	-auto-approve
 
 tf_destroy:
 	cd terraform/ && \

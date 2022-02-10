@@ -9,7 +9,6 @@ resource "google_privateca_ca_pool" "default" {
   issuance_policy {
     maximum_lifetime = "50000s"
     allowed_issuance_modes {
-
       allow_csr_based_issuance    = true
       allow_config_based_issuance = true
     }
@@ -59,24 +58,24 @@ resource "google_privateca_certificate_authority" "default" {
   ]
 }
 
-output "ca_certificate" {
-  value = google_privateca_certificate_authority.default.pem_ca_certificates
-}
-
-resource "google_service_account_iam_member" "createcerts-account-iam" {
+resource "google_service_account_iam_member" "createcerts_account_iam" {
   role               = "roles/iam.workloadIdentityUser"
   member             = "serviceAccount:${var.PROJECT_ID}.svc.id.goog[fulcio-system/createcerts]"
-  service_account_id = google_service_account.gke-workload.name
-  depends_on         = [google_service_account.gke-workload]
+  service_account_id = google_service_account.gke_workload.name
+  depends_on         = [google_service_account.gke_workload]
 }
 
-resource "google_service_account_iam_member" "fulcio-account-iam" {
+resource "google_service_account_iam_member" "fulcio_account_iam" {
   role               = "roles/iam.workloadIdentityUser"
   member             = "serviceAccount:${var.PROJECT_ID}.svc.id.goog[fulcio-system/fulcio]"
-  service_account_id = google_service_account.gke-workload.name
-  depends_on         = [google_service_account.gke-workload]
+  service_account_id = google_service_account.gke_workload.name
+  depends_on         = [google_service_account.gke_workload]
 }
 
 output "gcp_private_ca_parent" {
   value = google_privateca_ca_pool.default.id
+}
+
+output "ca_certificate" {
+  value = google_privateca_certificate_authority.default.pem_ca_certificates
 }

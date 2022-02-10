@@ -40,14 +40,19 @@ This will set up a kind cluster on your machine with:
 
 Create the GKE Cluster, install Tekton Pipelines, Dashboard and Chains
 
+We are doing a terraform targeted plan/apply because the GKE cluster has to be up and running before helm can apply, 
+since we are directly pointing the helm provider to the GKE cluster. 
+
+Set the GOOGLE_APPLICATION_CREDENTIALS path to where `gcloud auth application-default login` places your credentials file
+
 ```bash
-make tf_init tf_plan tf_apply
+make tf_init tf_target_plan tf_target_apply tf_plan tf_apply
 ```
 
 Let's make sure we are running on the GKE cluster we just created, switch kubectl context
 
 ```bash
-gcloud auth login
+gcloud auth application-default login # if need be
 gcloud container clusters list
 NAME                 LOCATION    MASTER_VERSION   MASTER_IP       MACHINE_TYPE   NODE_VERSION     NUM_NODES  STATUS
 chainguard-dev       us-east1-b  1.21.6-gke.1500  35.229.115.236  n1-standard-4  1.21.6-gke.1500  2          RUNNING
@@ -155,12 +160,9 @@ So that's the running version of the registry, so remove it:
 docker rm -f b1e3f3238f7a
 ```
 
-
 ### Network access
 
 Setup port forwarding:
-
-
 ```shell
 kubectl -n kourier-system port-forward service/kourier-internal 8080:80 &
 ```
@@ -203,7 +205,7 @@ attestations at each level via Tekton Chains.
 kubectl create configmap dockerfile --from-file=./docker/python/Dockerfile
 ```
 
-#### Install all the tasks that we have produced
+#### Install all the tasks that our needed for the pipeline
 ```shell
 kubectl apply -f ./config/common/
 task.tekton.dev/git-clone configured
@@ -216,30 +218,31 @@ task.tekton.dev/sbom-syft created
 task.tekton.dev/scan-trivy created
 ```
 
+Then run the pipeline with 
+
 GKE 
 ```shell
-kubectl apply -f ./config/gke/
+kubectl apply -f ./config/gke/python-pipelinerun-gke.yaml
 ```
 
 OR 
 
 Local
 ```shell
-kubectl apply -f ./config/kind/
+kubectl apply -f ./config/kind/python-pipelinerun-kind.yaml
 ```
-
 
 And then the pipeline should complete successfully, you can follow along:
 
 ```shell
 kubectl get pipelineruns
 NAME                      SUCCEEDED   REASON    STARTTIME   COMPLETIONTIME
-bare-build-pipeline-run   Unknown     Running   29s    
+build-pipeline-run        Unknown     Running   29s    
 ```
 
 You can view the logs of the pipeline run with [tkn cli](https://tekton.dev/docs/cli/)
 ```shell
-tkn pipelineruns logs bare-build-pipeline-run -w
+tkn pipelineruns logs build-pipeline-run -w
 ```
 
 If you have tekton dashboard installed 
@@ -285,7 +288,6 @@ kubectl -n fulcio-system get secrets fulcio-secret -ojsonpath='{.data.cert}' | b
 export SIGSTORE_ROOT_FILE=./fulcio-root.pem
 ```
 
-
 Grab the image that was produced
 
 Get the latest source-to-image task run that has completed successfully 
@@ -305,10 +307,11 @@ build-pipeline-run-source-to-image           False       Failed      4h12m      
 
 The Source to image task will produce the image id of the container it built and push to the registry
 
-
 ```shell
 IMAGE_ID=$(kubectl get taskruns build-pipeline-run-f57dc-source-to-image -o jsonpath='{.spec.params[0].value}' | sed 's/:0.1//')@$(kubectl get taskruns build-pipeline-run-f57dc-source-to-image -o jsonpath='{.status.taskResults[0].value}')
 ```
+
+Example image id 
 
 ```bash
 echo $IMAGE_ID
@@ -345,3 +348,13 @@ The following checks were performed on each of these signatures:
   - The signatures were integrated into the transparency log when the certificate was valid
   - Any certificates were verified against the Fulcio roots.
 ```
+
+## Clean up 
+
+GKE 
+
+   `make tf_destroy`
+
+Local 
+
+   `kind delete cluster --name sigstore`
