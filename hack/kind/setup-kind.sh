@@ -18,12 +18,12 @@ else
 fi
 
 if [ "${THIS_HW}" == "arm64" ]; then
-  RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.14/release-arm.yaml"
+  SIGSTORE_SCAFFOLDING_RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.14/release-arm.yaml"
 else
-  RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.14/release.yaml"
+  SIGSTORE_SCAFFOLDING_RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.14/release.yaml"
 fi
 
-TEST_RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.14/testrelease.yaml"
+SIGSTORE_SCAFFOLDING_TEST="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.14/testrelease.yaml"
 
 # Defaults
 K8S_VERSION="v1.21.x"
@@ -314,16 +314,17 @@ kubectl wait -n knative-serving --timeout=90s --for=condition=Complete jobs --al
 echo '::endgroup::'
 
 echo '::group:: Install Sigstore scaffolding'
-curl -L ${RELEASE} | kubectl apply -f -
+curl -L ${SIGSTORE_SCAFFOLDING_RELEASE} | kubectl apply -f -
 echo "waiting for sigstore pieces to come up"
 kubectl wait --timeout=15m -A --for=condition=Complete jobs --all
 
 echo "Running smoke test"
 # Make a copy of the CT Log public key so that we can use it to
 # validate the SCT coming from Fulcio.
+kubectl delete secret/ctlog-public-key || true
 kubectl -n ctlog-system get secrets ctlog-public-key -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
-kubectl apply -f ${TEST_RELEASE}
-kubectl wait --timeout=15m --for=condition=Complete jobs checktree check-oidc
+kubectl apply -f ${SIGSTORE_SCAFFOLDING_TEST}
+kubectl wait --timeout=15m --for=condition=Complete jobs checktree check-oidc --namespace default
 echo '::endgroup:: Install Sigstore scaffolding'
 
 echo '::group:: Install Tekton Pipelines and chains'

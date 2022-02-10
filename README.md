@@ -160,7 +160,7 @@ So that's the running version of the registry, so remove it:
 docker rm -f b1e3f3238f7a
 ```
 
-### Network access
+### <a name="network"></a> Network access
 
 Setup port forwarding:
 ```shell
@@ -242,7 +242,7 @@ build-pipeline-run        Unknown     Running   29s
 
 You can view the logs of the pipeline run with [tkn cli](https://tekton.dev/docs/cli/)
 ```shell
-tkn pipelineruns logs build-pipeline-run -w
+tkn pipelineruns logs build-pipeline-run -f
 ```
 
 If you have tekton dashboard installed 
@@ -262,6 +262,8 @@ When the pipeline finishes you see this in the logs
 
 [source-to-image : digest-to-results] sha256:824e9a8a00d5915bc87e25316dfbb19dbcae292970b02a464e2da1a665c7d54b
 ```
+
+![](images/tekton-pipeline.png)
 
 # Inspect results
 
@@ -305,10 +307,13 @@ build-pipeline-run-rvn62-source-to-image     True        Succeeded   3h38m      
 build-pipeline-run-source-to-image           False       Failed      4h12m       4h10m
 ```
 
+```shell
+TASK_NAME=build-pipeline-run-f57dc-source-to-image
+```
 The Source to image task will produce the image id of the container it built and push to the registry
 
 ```shell
-IMAGE_ID=$(kubectl get taskruns build-pipeline-run-f57dc-source-to-image -o jsonpath='{.spec.params[0].value}' | sed 's/:0.1//')@$(kubectl get taskruns build-pipeline-run-f57dc-source-to-image -o jsonpath='{.status.taskResults[0].value}')
+IMAGE_ID=$(kubectl get taskruns ${TASK_NAME} -o jsonpath='{.spec.params[0].value}' | sed 's/:0.1//')@$(kubectl get taskruns ${TASK_NAME} -o jsonpath='{.status.taskResults[0].value}')
 ```
 
 Example image id 
@@ -320,22 +325,22 @@ gcr.io/chainguard-dev/pythontest@sha256:c089acd03a21830c329d70f61cefa2a29c43e59e
 
 Get the SBOM:
 
-Pull down the Root CA from fulcio 
+Pull down the Root CA from fulcio , Make sure you have set up [Network Access](#network)
 
 ```bash
-curl http://fulcio.fulcio-system.svc:8080/api/v1/rootCert > ./fulcio-public.pem
+curl http://fulcio.fulcio-system.svc:8080/api/v1/rootCert > ./fulcio-root.pem
 ```
 
 Now download the SBOM 
 
 ```shell
-SIGSTORE_ROOT_FILE=./fulcio-public.pem COSIGN_EXPERIMENTAL=1 cosign download sbom --allow-insecure-registry  $IMAGE_ID > /tmp/sbom
+SIGSTORE_ROOT_FILE=./fulcio-root.pem COSIGN_EXPERIMENTAL=1 cosign download sbom --allow-insecure-registry  $IMAGE_ID > /tmp/sbom
 ```
 
 Get the trivy scan result:
 
 ```shell
-SIGSTORE_ROOT_FILE=./fulcio-public.pem COSIGN_EXPERIMENTAL=1 cosign verify-attestation --rekor-url=http://rekor.rekor-system.svc:8080 --allow-insecure-registry  $IMAGE_ID > /tmp/attestations
+SIGSTORE_ROOT_FILE=./fulcio-root.pem COSIGN_EXPERIMENTAL=1 cosign verify-attestation --rekor-url=http://rekor.rekor-system.svc:8080 --allow-insecure-registry  $IMAGE_ID > /tmp/attestations
 ```
 
 if all goes well you'll see this output

@@ -142,10 +142,11 @@ echo '::group:: Install Sigstore scaffolding'
 echo 'Deploying with Private CA'
 kubectl apply -f ./hack/gke/release-arm-gke-private-ca.yaml
 
-echo "waiting for sigstore pieces to come up"
-kubectl wait --timeout=10m -A --for=condition=Complete jobs --all
-
+# Delete check jobs from previous runs just in case
 kubectl delete -f ./hack/gke/testrelease-gke.yaml || true
+
+echo "waiting for sigstore pieces to come up"
+kubectl wait --timeout=15m -A --for=condition=Complete jobs --all
 
 echo "Sleeping before starting smoke tests"
 secs=$((60))
