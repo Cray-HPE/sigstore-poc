@@ -17,13 +17,13 @@ else
   RUNNING_ON_MAC="false"
 fi
 
-if [ "${THIS_HW}" == "arm64" ]; then
-  SIGSTORE_SCAFFOLDING_RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.14/release-arm.yaml"
+if [ ${THIS_HW} == "arm64" ]; then
+  RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.16/release-arm.yaml"
 else
-  SIGSTORE_SCAFFOLDING_RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.14/release.yaml"
+  RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.16/release.yaml"
 fi
 
-SIGSTORE_SCAFFOLDING_TEST="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.14/testrelease.yaml"
+TEST_RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.16/testrelease.yaml"
 
 TEKTON_CHAINS_RELEASE="https://storage.googleapis.com/tekton-releases/chains/latest/release.yaml"
 TEKTON_PIPELINES_RELEASE="https://storage.googleapis.com/tekton-releases-nightly/pipeline/latest/release.yaml"
