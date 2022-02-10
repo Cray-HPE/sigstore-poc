@@ -161,6 +161,7 @@ echo "Running smoke test"
 kubectl delete secret/ctlog-public-key || true
 kubectl -n ctlog-system get secrets ctlog-public-key -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
 kubectl apply -f ./hack/gke/testrelease-gke.yaml
+echo "Waiting on checktree check-oidc to complete"
 kubectl wait --timeout=10m --for=condition=Complete jobs checktree
 echo '::endgroup:: Install Sigstore scaffolding'
 

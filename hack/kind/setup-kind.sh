@@ -102,7 +102,7 @@ fi
 
 if ! command -v kind &> /dev/null; then
   echo ":: Installing Kind ::"
-  curl -Lo ./kind "https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-$(uname)-${THIS_HW}"
+  curl -Lo ./kind "https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-$(uname)-$(THIS_HW)"
   chmod +x ./kind
   sudo mv kind /usr/local/bin
 fi
@@ -324,6 +324,7 @@ echo "Running smoke test"
 kubectl delete secret/ctlog-public-key || true
 kubectl -n ctlog-system get secrets ctlog-public-key -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
 kubectl apply -f ${SIGSTORE_SCAFFOLDING_TEST}
+echo "Waiting on checktree check-oidc to complete"
 kubectl wait --timeout=15m --for=condition=Complete jobs checktree check-oidc --namespace default
 echo '::endgroup:: Install Sigstore scaffolding'
 
@@ -357,7 +358,7 @@ kubectl patch configmap/chains-config \
 # Restart so picks up the changes.
 kubectl -n tekton-chains delete po -l app=tekton-chains-controller
 
-while ! kubectl apply --filename kubectl apply --filename https://storage.googleapis.com/tekton-releases/dashboard/latest/tekton-dashboard-release.yaml
+while ! kubectl apply --filename https://storage.googleapis.com/tekton-releases/dashboard/latest/tekton-dashboard-release.yaml
 do
   echo "waiting for tekton dashboard to get installed"
   sleep 2

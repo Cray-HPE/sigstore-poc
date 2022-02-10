@@ -25,6 +25,9 @@ for Python and Kind and/or GCP/GKE.
 
 ### Local Development 
 
+
+**Note** you may hit file limits on the mac `sudo launchctl limit maxfiles 65536 200000` to remediate that issue
+
 ```shell
 ./hack/kind/setup-kind.sh
 ```
@@ -357,9 +360,13 @@ The following checks were performed on each of these signatures:
 ## Clean up 
 
 GKE 
-
-   `make tf_destroy`
+```shell
+make tf_destroy
+```
 
 Local 
 
-   `kind delete cluster --name sigstore`
+```shell
+kind delete cluster --name sigstore`
+docker rm -f `docker ps -a | grep 'registry:2' | awk -F " " '{print $1}'
+```
