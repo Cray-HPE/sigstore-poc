@@ -1,0 +1,44 @@
+# Copyright 2021 Chainguard, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rekor
+  namespace: rekor-system
+---
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  namespace: rekor-system
+  name: rekor
+spec:
+  template:
+    spec:
+      serviceAccountName: rekor
+      containers:
+      - name: rekor
+        image: gcr.io/projectsigstore/rekor-server@sha256:516651575db19412c94d4260349a84a9c30b37b5d2635232fba669262c5cbfa6
+        ports:
+        - containerPort: 3000
+        args: [
+          "serve",
+          "--trillian_log_server.address=log-server.trillian-system.svc",
+          "--trillian_log_server.port=80",
+          "--rekor_server.address=0.0.0.0",
+          "--redis_server.address=redis.rekor-system.svc",
+          "--redis_server.port=6379",
+          "--enable_retrieve_api=true",
+          "--trillian_log_server.tlog_id=$(TREE_ID)",
+          "--log_type=prod",
+          "--rekor_server.signer=memory",
+          "--enable_attestation_storage=true",
+          "--attestation_storage_bucket=file:///tmp/",
+#          "--rekor_server.timestamp_chain=$(TIMESTAMP_CHAIN)"
+        ]
+        env:
+        - name: TREE_ID
+          valueFrom:
+            configMapKeyRef:
+              name: rekor-config
+              key: treeID
