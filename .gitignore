@@ -1,0 +1,11 @@
+terraform/.terraform.lock.hcl
+terraform/plan.out
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform.tfstate.d/
+release-arm.yaml
+testrelease.yaml
+terraform/.terraform.tfstate.lock.info
+ctlog-public.pem
+fulcio-public.pem
+kind.yaml

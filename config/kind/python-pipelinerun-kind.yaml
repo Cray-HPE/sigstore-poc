@@ -31,13 +31,16 @@ spec:
   params:
     - name: git-url
       value: "https://github.com/Cray-HPE/csm.git"
-      #value: "https://github.com/vaikas/build-playground.git"
     - name: git-revision
       value: "main"
     - name: imageUrl
-      value: "gcr.io/vaikas-chainguard/pythontest"
+      value: "registry.local:5000/knative/pythontest"
     - name: imageTag
       value: "0.1"
+    - name: fulcio-endpoint
+      value: "http://fulcio.fulcio-system.svc"
+    - name: rekor-endpoint
+      value: "http://rekor.rekor-system.svc"
   pipelineRef:
     name: python-build-pipeline
   workspaces:

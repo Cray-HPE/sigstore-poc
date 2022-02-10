@@ -27,31 +27,21 @@ jobs:
 
     - name: Setup Cluster
       run: |
-        ./hack/setup-kind.sh
+        ./hack/kind/setup-kind.sh
 
     - name: Install all the everythings
       timeout-minutes: 10
       run: |
         # Install the Dockerfile as configmap for 'install-dockerfile-task'
-        kubectl create configmap dockerfile --from-file=./docker/build-python-app/Dockerfile
+        kubectl create configmap dockerfile --from-file=./docker/python/Dockerfile
 
-        # Install kaniko task
-        kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/v1beta1/kaniko/kaniko.yaml
-
-        kubectl apply -f ./config/python-pipeline/list-dependencies-task.yaml
-        kubectl apply -f ./config/python-pipeline/install-dockerfile-task.yaml
-        kubectl apply -f ./config/python-pipeline/python-dependencies-task.yaml
-        kubectl apply -f ./config/python-pipeline/sbom-task.yaml
-        kubectl apply -f ./config/python-pipeline/trivy-task.yaml
-
-        # Then install the pipeline
-        kubectl apply -f ./config/python-pipeline/python-pipeline.yaml
-        # And run it
-        kubectl apply -f ./config/python-pipeline/python-pipelinerun-kind.yaml
-
+        kubectl apply -f ./config/common
+        
         # Give s a little time for things to spin up
         sleep 5
-
+        
+        kubectl apply -f ./config/kind/
+        
         echo "Waiting for the pipelinerun to complete..."
         kubectl wait --timeout 15m --for=condition=Succeeded pipelineruns --all
 

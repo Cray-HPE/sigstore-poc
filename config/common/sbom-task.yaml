@@ -23,7 +23,7 @@ spec:
   steps:
   # This writes the generated SBOM to the workspace.
   - name: generate-sbom
-    image: ghcr.io/vaikas/sbom-90f2914bafee4d6b1dedda57e666ff84@sha256:7282f2dbe163b7e3c7f7cb4974a535ef1263f2b5f9b941697571188d20de9629
+    image: ghcr.io/vaikas/sbom-90f2914bafee4d6b1dedda57e666ff84@sha256:5281e87576a1a2855c91e0b44d32001f5a52fd9ca42906eb325b9f076ad944ec
     args: [
       "-format", "spdx",
       "-file", "/workspace/image.sbom",
@@ -40,6 +40,8 @@ spec:
       "$(params['dev.chainguard.refresher.digest'])"
     ]
     env:
+    - name: SIGSTORE_ROOT_FILE
+      value: "/data/public"
     - name: COSIGN_EXPERIMENTAL
       value: "1"
     - name: COSIGN_REPOSITORY
@@ -47,6 +49,8 @@ spec:
     volumeMounts:
     - name: oidc-info
       mountPath: /var/run/sigstore/cosign
+    - name: ctlog-public-key
+      mountPath: "/data"
   volumes:
   - name: oidc-info
     projected:
@@ -55,3 +59,17 @@ spec:
             path: oidc-token
             expirationSeconds: 600 # Use as short-lived as possible.
             audience: sigstore
+  - name: fulcio-cert
+    secret:
+      secretName: fulcio-secret
+      items:
+        - key: private
+          path: key.pem
+        - key: cert
+          path: cert.pem
+  - name: ctlog-public-key
+    secret:
+      secretName: ctlog-public-key
+      items:
+        - key: public
+          path: rootfile.pem

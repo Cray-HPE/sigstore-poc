@@ -26,18 +26,16 @@ spec:
 apiVersion: tekton.dev/v1beta1
 kind: PipelineRun
 metadata:
-  name: bare-build-pipeline-run
+  name: build-pipeline-run
 spec:
+  serviceAccountName: gke-user
   params:
     - name: git-url
       value: "https://github.com/Cray-HPE/csm.git"
-      #value: "https://github.com/vaikas/build-playground.git"
     - name: git-revision
       value: "main"
     - name: imageUrl
-      # Since this runs on kind, use this as target
-      # value: "gchr.io/vaikas/build-playground/pythontest"
-      value: "registry.local:5000/knative/pythontest"
+      value: "gcr.io/chainguard-dev/pythontest"
     - name: imageTag
       value: "0.1"
     - name: fulcio-endpoint

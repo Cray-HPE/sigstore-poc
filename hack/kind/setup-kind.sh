@@ -10,25 +10,24 @@ set -o pipefail
 THIS_OS="$(uname -s)"
 THIS_HW="$(uname -m)"
 echo "RUNNING ON ${THIS_OS}"
-if [ ${THIS_OS} == "Darwin" ]; then
+if [ "${THIS_OS}" == "Darwin" ]; then
   echo "Running on Darwin"
   RUNNING_ON_MAC="true"
 else
   RUNNING_ON_MAC="false"
 fi
 
-if [ ${THIS_HW} == "arm64" ]; then
-  RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.14/release-arm.yaml"
+if [ "${THIS_HW}" == "arm64" ]; then
+  SIGSTORE_SCAFFOLDING_RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.14/release-arm.yaml"
 else
-  RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.14/release.yaml"
+  SIGSTORE_SCAFFOLDING_RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.14/release.yaml"
 fi
 
-TEST_RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.14/testrelease.yaml"
+SIGSTORE_SCAFFOLDING_TEST="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.14/testrelease.yaml"
 
-#if [[ -z "${GITHUB_WORKSPACE}" ]]; then
-#  echo "This script is expected to run in the context of GitHub Actions."
-#  exit 1
-#fi
+TEKTON_CHAINS_RELEASE="https://storage.googleapis.com/tekton-releases/chains/latest/release.yaml"
+TEKTON_PIPELINES_RELEASE="https://storage.googleapis.com/tekton-releases-nightly/pipeline/latest/release.yaml"
+TEKTON_DASHBOARD_RELEASE="https://storage.googleapis.com/tekton-releases/dashboard/latest/tekton-dashboard-release.yaml"
 
 # Defaults
 K8S_VERSION="v1.21.x"
@@ -36,7 +35,7 @@ KNATIVE_VERSION="1.1.0"
 REGISTRY_NAME="registry.local"
 REGISTRY_PORT="5000"
 CLUSTER_SUFFIX="cluster.local"
-NODE_COUNT="1"
+NODE_COUNT="2"
 
 while [[ $# -ne 0 ]]; do
   parameter="$1"
@@ -62,6 +61,8 @@ while [[ $# -ne 0 ]]; do
   esac
   shift
 done
+
+docker stop "${REGISTRY_NAME}" && docker rm "${REGISTRY_NAME}"
 
 # The version map correlated with this version of KinD
 KIND_VERSION="v0.11.1"
@@ -105,9 +106,12 @@ if [ ${RUNNING_ON_MAC} == "false" ]; then
   sudo mount -t tmpfs tmpfs /tmp/etcd
 fi
 
-curl -Lo ./kind "https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-$(uname)-amd64"
-chmod +x ./kind
-sudo mv kind /usr/local/bin
+if ! command -v kind &> /dev/null; then
+  echo ":: Installing Kind ::"
+  curl -Lo ./kind "https://github.com/kubernetes-sigs/kind/releases/download/${KIND_VERSION}/kind-$(uname)-$(THIS_HW)"
+  chmod +x ./kind
+  sudo mv kind /usr/local/bin
+fi
 
 echo '::endgroup::'
 
@@ -122,6 +126,7 @@ echo '::group:: Build KinD Config'
 cat > kind.yaml <<EOF
 apiVersion: kind.x-k8s.io/v1alpha4
 kind: Cluster
+name: sigstore
 nodes:
 - role: control-plane
   image: "${KIND_IMAGE}"
@@ -165,6 +170,7 @@ EOF_3
 cat kind.yaml
 echo '::endgroup::'
 
+kind delete cluster --name sigstore
 echo '::group:: Create KinD Cluster'
 kind create cluster --config kind.yaml --wait 5m
 
@@ -266,7 +272,7 @@ kubectl patch configmap/config-network \
 
 # Wait for Knative to be ready (or webhook will reject SaaS)
 for x in $(kubectl get deploy --namespace knative-serving -oname); do
-  kubectl rollout status --timeout 5m --namespace knative-serving $x
+  kubectl rollout status --timeout 5m --namespace knative-serving "${x}"
 done
 
 # Enable the features we need that are currently feature-flagged in Knative.
@@ -314,20 +320,22 @@ kubectl wait -n knative-serving --timeout=90s --for=condition=Complete jobs --al
 echo '::endgroup::'
 
 echo '::group:: Install Sigstore scaffolding'
-curl -L ${RELEASE} | kubectl apply -f -
+curl -L ${SIGSTORE_SCAFFOLDING_RELEASE} | kubectl apply -f -
 echo "waiting for sigstore pieces to come up"
 kubectl wait --timeout=15m -A --for=condition=Complete jobs --all
 
 echo "Running smoke test"
 # Make a copy of the CT Log public key so that we can use it to
 # validate the SCT coming from Fulcio.
+kubectl delete secret/ctlog-public-key || true
 kubectl -n ctlog-system get secrets ctlog-public-key -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
-kubectl apply -f ${TEST_RELEASE}
-kubectl wait --timeout=15m --for=condition=Complete jobs checktree check-oidc
+kubectl apply -f ${SIGSTORE_SCAFFOLDING_TEST}
+echo "Waiting on checktree check-oidc to complete"
+kubectl wait --timeout=15m --for=condition=Complete jobs checktree check-oidc --namespace default
 echo '::endgroup:: Install Sigstore scaffolding'
 
 echo '::group:: Install Tekton Pipelines and chains'
-while ! kubectl apply --filename https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml
+while ! kubectl apply --filename "${TEKTON_PIPELINES_RELEASE}"
 do
   echo "waiting for tekton pipelines to get installed"
   sleep 2
@@ -342,7 +350,7 @@ kubectl patch configmap/feature-flags \
 # Restart so picks up the changes.
 kubectl -n tekton-pipelines delete po -l app=tekton-pipelines-controller
 
-while ! kubectl apply --filename https://storage.googleapis.com/tekton-releases/chains/latest/release.yaml
+while ! kubectl apply --filename "${TEKTON_CHAINS_RELEASE}"
 do
   echo "waiting for tekton chains to get installed"
   sleep 2
@@ -356,11 +364,9 @@ kubectl patch configmap/chains-config \
 # Restart so picks up the changes.
 kubectl -n tekton-chains delete po -l app=tekton-chains-controller
 
-# Install task that fetches from github
-while ! kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/main/task/git-clone/0.5/git-clone.yaml
+while ! kubectl apply --filename "${TEKTON_DASHBOARD_RELEASE}"
 do
-  echo "waiting for git-clone tekton task to get installed"
+  echo "waiting for tekton dashboard to get installed"
   sleep 2
 done
-
 echo '::endgroup::'
