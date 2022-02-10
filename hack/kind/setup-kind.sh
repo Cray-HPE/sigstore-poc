@@ -25,13 +25,17 @@ fi
 
 SIGSTORE_SCAFFOLDING_TEST="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.14/testrelease.yaml"
 
+TEKTON_CHAINS_RELEASE="https://storage.googleapis.com/tekton-releases/chains/latest/release.yaml"
+TEKTON_PIPELINES_RELEASE="https://storage.googleapis.com/tekton-releases-nightly/pipeline/latest/release.yaml"
+TEKTON_DASHBOARD_RELEASE="https://storage.googleapis.com/tekton-releases/dashboard/latest/tekton-dashboard-release.yaml"
+
 # Defaults
 K8S_VERSION="v1.21.x"
 KNATIVE_VERSION="1.1.0"
 REGISTRY_NAME="registry.local"
 REGISTRY_PORT="5000"
 CLUSTER_SUFFIX="cluster.local"
-NODE_COUNT="1"
+NODE_COUNT="2"
 
 while [[ $# -ne 0 ]]; do
   parameter="$1"
@@ -57,6 +61,8 @@ while [[ $# -ne 0 ]]; do
   esac
   shift
 done
+
+docker stop "${REGISTRY_NAME}" && docker rm "${REGISTRY_NAME}"
 
 # The version map correlated with this version of KinD
 KIND_VERSION="v0.11.1"
@@ -329,7 +335,7 @@ kubectl wait --timeout=15m --for=condition=Complete jobs checktree check-oidc --
 echo '::endgroup:: Install Sigstore scaffolding'
 
 echo '::group:: Install Tekton Pipelines and chains'
-while ! kubectl apply --filename https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml
+while ! kubectl apply --filename "${TEKTON_PIPELINES_RELEASE}"
 do
   echo "waiting for tekton pipelines to get installed"
   sleep 2
@@ -344,7 +350,7 @@ kubectl patch configmap/feature-flags \
 # Restart so picks up the changes.
 kubectl -n tekton-pipelines delete po -l app=tekton-pipelines-controller
 
-while ! kubectl apply --filename https://storage.googleapis.com/tekton-releases/chains/latest/release.yaml
+while ! kubectl apply --filename "${TEKTON_CHAINS_RELEASE}"
 do
   echo "waiting for tekton chains to get installed"
   sleep 2
@@ -358,7 +364,7 @@ kubectl patch configmap/chains-config \
 # Restart so picks up the changes.
 kubectl -n tekton-chains delete po -l app=tekton-chains-controller
 
-while ! kubectl apply --filename https://storage.googleapis.com/tekton-releases/dashboard/latest/tekton-dashboard-release.yaml
+while ! kubectl apply --filename "${TEKTON_DASHBOARD_RELEASE}"
 do
   echo "waiting for tekton dashboard to get installed"
   sleep 2
