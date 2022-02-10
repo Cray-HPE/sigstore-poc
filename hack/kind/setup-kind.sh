@@ -17,10 +17,10 @@ else
   RUNNING_ON_MAC="false"
 fi
 
-if [ ${THIS_HW} == "arm64" ]; then
-  RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.16/release-arm.yaml"
+if [ "${THIS_HW}" == "arm64" ]; then
+  SIGSTORE_SCAFFOLDING_RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.16/release-arm.yaml"
 else
-  RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.16/release.yaml"
+  SIGSTORE_SCAFFOLDING_RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.16/release.yaml"
 fi
 
 TEST_RELEASE="https://github.com/vaikas/sigstore-scaffolding/releases/download/v0.1.16/testrelease.yaml"
