@@ -18,7 +18,7 @@ resource "google_privateca_ca_pool" "default" {
 
 resource "google_privateca_certificate_authority" "default" {
   pool                     = google_privateca_ca_pool.default.name
-  certificate_authority_id = "sigstore-poc-${var.workspace_id}"
+  certificate_authority_id = "sigstore-${var.workspace_id}"
   location                 = var.DEFAULT_LOCATION
   project                  = var.PROJECT_ID
 
@@ -51,8 +51,11 @@ resource "google_privateca_certificate_authority" "default" {
         }
       }
     }
-  }
 
+  }
+  lifecycle {
+     prevent_destroy = true
+  }
   depends_on = [
     google_privateca_ca_pool.default
   ]
