@@ -8,7 +8,7 @@ set -o nounset
 set -o pipefail
 
 # Delete the kind cluster first
-kind delete clusters kind
+kind delete clusters sigstore
 
 # Then remove the registry
 docker rm -f `docker ps -a | grep 'registry:2' | awk -F " " '{print $1}'`
