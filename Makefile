@@ -3,6 +3,10 @@ KIND_LOG_LEVEL=6
 WORKSPACE_ID ?= $(shell cd terraform/ && terraform workspace show)
 include .env
 
+tk_chains_helm_chart_version="0.2.0"
+tk_dashboard_helm_chart_version="0.2.0"
+tk_pl_helm_chart_version="v0.2.0"
+
 export
 
 dev_cluster:
@@ -39,6 +43,7 @@ tf_target_plan:
 	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
 	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
 	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
+	-var="tk_chains_helm_chart_version=${tk_chains_helm_chart_version}" \
 	-var="workspace_id=${WORKSPACE_ID}" \
 	-var="config_context=${K8S_CONTEXT}" \
 	-target=google_container_cluster.primary \
