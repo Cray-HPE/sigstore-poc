@@ -321,13 +321,13 @@ echo '::endgroup::'
 
 echo '::group:: Install Sigstore scaffolding'
 curl -L ${SIGSTORE_SCAFFOLDING_RELEASE} | kubectl apply -f -
-echo "waiting for sigstore pieces to come up"
+echo 'waiting for sigstore pieces to come up. This might take a few minutes'
 kubectl wait --timeout=15m -A --for=condition=Complete jobs --all
 
-echo "Running smoke test"
+echo 'Running smoke test'
 # Make a copy of the CT Log public key so that we can use it to
 # validate the SCT coming from Fulcio.
-echo "Removing a possibly already existing ctlog public secret. If this errors, this is ok"
+echo 'Removing a possibly already existing ctlog public secret. If this errors, this is ok'
 kubectl delete secret/ctlog-public-key || true
 kubectl -n ctlog-system get secrets ctlog-public-key -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
 kubectl apply -f ${SIGSTORE_SCAFFOLDING_TEST}

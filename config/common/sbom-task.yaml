@@ -23,6 +23,15 @@ spec:
   steps:
   # This writes the generated SBOM to the workspace.
   - name: generate-sbom
+# TODO(vaikas): I'd like to switch to head but it's failing
+# https://github.com/tektoncd/pipeline/issues/4566
+#    image: anchore/syft:v0.37.10
+#    args: [
+#      "$(params['dev.chainguard.refresher.digest'])",
+#      "-q",
+#      "-o", "spdx",
+#      "--file", "/workspace/image.sbom",
+#    ]
     image: ghcr.io/vaikas/sbom-90f2914bafee4d6b1dedda57e666ff84@sha256:c6c245eab08dba80f2eb4f07bfdbb164826ff2d21359dc60bc82ae1eb651f8ff
     args: [
       "-format", "spdx",
