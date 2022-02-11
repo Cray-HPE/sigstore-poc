@@ -23,7 +23,7 @@ spec:
   steps:
   # This writes the generated SBOM to the workspace.
   - name: generate-sbom
-    image: ghcr.io/vaikas/sbom-90f2914bafee4d6b1dedda57e666ff84@sha256:5281e87576a1a2855c91e0b44d32001f5a52fd9ca42906eb325b9f076ad944ec
+    image: ghcr.io/vaikas/sbom-90f2914bafee4d6b1dedda57e666ff84@sha256:c6c245eab08dba80f2eb4f07bfdbb164826ff2d21359dc60bc82ae1eb651f8ff
     args: [
       "-format", "spdx",
       "-file", "/workspace/image.sbom",
