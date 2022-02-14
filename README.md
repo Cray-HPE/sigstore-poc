@@ -220,16 +220,10 @@ pipeline pieces. This is very rough beginning of a proper Python pipeline and is
 meant to demonstrate breaking the large build into multiple steps and providing
 attestations at each level via Tekton Chains.
 
-#### Install Dockerfile that Kaniko will use to build the app image
-```bash
-kubectl create configmap dockerfile --from-file=./docker/python/Dockerfile
-```
-
 #### Install all the tasks that our needed for the pipeline
 ```shell
 kubectl apply -f ./config/common/
 task.tekton.dev/git-clone configured
-task.tekton.dev/install-dockerfile created
 task.tekton.dev/kaniko created
 task.tekton.dev/list-dependencies created
 task.tekton.dev/install-python-dependencies created
@@ -354,7 +348,7 @@ curl http://fulcio.fulcio-system.svc:8080/api/v1/rootCert > ./fulcio-root.pem
 Now download the SBOM
 
 ```shell
-SIGSTORE_ROOT_FILE=./fulcio-root.pem COSIGN_EXPERIMENTAL=1 cosign download sbom --allow-insecure-registry  $IMAGE_ID > /tmp/sbom
+COSIGN_EXPERIMENTAL=1 cosign download sbom --allow-insecure-registry  $IMAGE_ID > /tmp/sbom
 ```
 
 Get the trivy scan result:

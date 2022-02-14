@@ -32,9 +32,6 @@ jobs:
     - name: Install all the everythings
       timeout-minutes: 10
       run: |
-        # Install the Dockerfile as configmap for 'install-dockerfile-task'
-        kubectl create configmap dockerfile --from-file=./docker/python/Dockerfile
-
         kubectl apply -f ./config/common
         kubectl apply -f ./config/python
         # kubectl apply -f ./config/go
