@@ -36,12 +36,14 @@ jobs:
         kubectl create configmap dockerfile --from-file=./docker/python/Dockerfile
 
         kubectl apply -f ./config/common
-        
+        kubectl apply -f ./config/python
+        # kubectl apply -f ./config/go
+
         # Give s a little time for things to spin up
         sleep 5
-        
+
         kubectl apply -f ./config/kind/
-        
+
         echo "Waiting for the pipelinerun to complete..."
         kubectl wait --timeout 15m --for=condition=Succeeded pipelineruns --all
 

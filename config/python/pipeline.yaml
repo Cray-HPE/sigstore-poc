@@ -13,16 +13,23 @@ spec:
       description: Image name to create including repository
     - name: imageTag
       description: Image tag
+    - name: REQUIREMENTSFILE
+      description: Requirements file for running pip.
+    - name: DOCKERFILE
+      description: Dockerfile in the original source repo to use for building the image with.
     - name: fulcio-endpoint
       description: Fulcio endpoint
       default: "http://fulcio.fulcio-system.svc"
     - name: rekor-endpoint
       description: Rekor endpoint
       default: "http://rekor.rekor-system.svc"
+  results:
+    - name: IMAGES
+      description: Digest of the image that was created
+      value: $(params.imageUrl)@$(tasks.source-to-image.results.IMAGE-DIGEST)
   workspaces:
     - name: git-source
     - name: dependencies
-    - name: dockerfile-cm
   tasks:
     - name: fetch-from-git
       taskRef:
@@ -40,24 +47,17 @@ spec:
       - fetch-from-git
       taskRef:
         name: install-python-dependencies
+      params:
+        - name: REQUIREMENTSFILE
+          value: $(params.REQUIREMENTSFILE)
       workspaces:
         - name: source
           workspace: git-source
         - name: dependencies
           workspace: dependencies
-    - name: install-dockerfile
-      taskRef:
-        name: install-dockerfile
-      runAfter:
-      - install-dependencies
-      workspaces:
-      - name: dependencies
-        workspace: dependencies
-      - name: dockerfile-cm
-        workspace: dockerfile-cm
     - name: list-dependencies
       runAfter:
-      - install-dockerfile
+      - install-dependencies
       taskRef:
         name: list-dependencies
       workspaces:
@@ -74,6 +74,8 @@ spec:
       params:
         - name: IMAGE
           value: $(params.imageUrl):$(params.imageTag)
+        - name: DOCKERFILE
+          value: $(params.DOCKERFILE)
     - name: generate-sbom
       taskRef:
         name: sbom-syft
