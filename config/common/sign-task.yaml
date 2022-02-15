@@ -1,0 +1,68 @@
+# Copyright 2022 Chainguard, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: sign-image
+spec:
+  params:
+  - name: IMAGE
+    description: Image to sign
+    type: string
+  - name: COSIGN_REPOSITORY
+    type: string
+    default: ""
+  - name: SIGSTORE_CT_LOG_PUBLIC_KEY_FILE
+    type: string
+    default: ""
+  - name: dev.chainguard.refresher.fulcio-endpoint
+    type: string
+    default: "https://fulcio.sigstore.dev"
+  - name: dev.chainguard.refresher.rekor-endpoint
+    type: string
+    default: "https://rekor.sigstore.dev"
+  steps:
+  - name: sign
+    image: gcr.io/projectsigstore/cosign:v1.5.1
+    timeout: 2m
+    args: [
+      "sign",
+      # Use workload identity to access images
+      "--k8s-keychain",
+      # Use the Rekor URL provided by the refresher.
+      "--rekor-url", "$(params['dev.chainguard.refresher.rekor-endpoint'])",
+      # Use the Fulcio URL provided by the refresher.
+      "--fulcio-url", "$(params['dev.chainguard.refresher.fulcio-endpoint'])",
+      "--force",
+      "$(params['IMAGE'])",
+    ]
+    env:
+    - name: COSIGN_EXPERIMENTAL
+      value: "1"
+    - name: COSIGN_REPOSITORY
+      value: $(params["COSIGN_REPOSITORY"])
+    - name: SIGSTORE_CT_LOG_PUBLIC_KEY_FILE
+      value: $(params["SIGSTORE_CT_LOG_PUBLIC_KEY_FILE"])
+    volumeMounts:
+    - name: oidc-info
+      mountPath: /var/run/sigstore/cosign
+    - name: ctlog-public-key
+      mountPath: /data
+  volumes:
+  - name: oidc-info
+    projected:
+      sources:
+        - serviceAccountToken:
+            path: oidc-token
+            expirationSeconds: 600 # Use as short-lived as possible.
+            audience: sigstore
+  - name: ctlog-public-key
+    secret:
+      items:
+      - key: public
+        path: ctlog-public.pem
+      secretName: ctlog-public-key
+      # This is marked as optional so that we can use with public Fulcio as
+      # well by not specifying SIGSTORE_CT_LOG_PUBLIC_KEY_FILE.
+      optional: true

@@ -360,6 +360,25 @@ Pull down the Root CA from fulcio , Make sure you have set up [Network Access](#
 curl http://fulcio.fulcio-system.svc:8080/api/v1/rootCert > ./fulcio-root.pem
 ```
 
+Ensure the image was Signed:
+
+```shell
+SIGSTORE_ROOT_FILE=./fulcio-root.pem COSIGN_EXPERIMENTAL=1 cosign verify --allow-insecure-registry --rekor-url=http://rekor.rekor-system.svc:8080 --allow-insecure-registry $IMAGE_ID
+```
+
+And you should see something like this:
+```
+Verification for registry.local:5000/knative/pythontest@sha256:63ac5cfea7d421d92635f97e9e014b5ceed0613566d52111f990b6076e564905 --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - The claims were present in the transparency log
+  - The signatures were integrated into the transparency log when the certificate was valid
+  - Any certificates were verified against the Fulcio roots.
+
+  [{"critical":{"identity":{"docker-reference":"registry.local:5000/knative/pythontest"},"image":{"docker-manifest-digest":"sha256:63a<SNIPPED HERE FOR READABILITY>
+```
+
+
 Now download the SBOM
 
 ```shell

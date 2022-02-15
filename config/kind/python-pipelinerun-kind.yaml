@@ -35,6 +35,8 @@ spec:
       value: "main"
     - name: imageUrl
       value: "registry.local:5000/knative/pythontest"
+    - name: SIGSTORE_CT_LOG_PUBLIC_KEY_FILE
+      value: "/data/ctlog-public.pem"
     - name: imageTag
       value: "0.1"
     - name: REQUIREMENTSFILE
