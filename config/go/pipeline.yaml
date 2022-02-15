@@ -68,18 +68,6 @@ spec:
           value: $(params.KO_DOCKER_REPO)
         - name: MAIN_DIR
           value: $(params.MAIN_DIR)
-    - name: generate-sbom
-      taskRef:
-        name: sbom-syft
-      runAfter:
-        - source-to-image
-      params:
-        - name: dev.chainguard.refresher.digest
-          value: $(tasks.source-to-image.results.DIGESTS)
-        - name: dev.chainguard.refresher.rekor-endpoint
-          value: $(params.rekor-endpoint)
-        - name: dev.chainguard.refresher.fulcio-endpoint
-          value: $(params.fulcio-endpoint)
     - name: trivy-scan
       taskRef:
         name: scan-trivy
