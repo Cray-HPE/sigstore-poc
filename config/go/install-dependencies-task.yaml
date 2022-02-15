@@ -1,0 +1,23 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: install-go-dependencies
+spec:
+  workspaces:
+    - name: source
+      description: Where the git clones the repo to.
+    - name: dependencies
+      description: Where the dependencies are installed into
+  steps:
+    - name: install-go-requirements
+      image: golang:1.17.7-bullseye
+      script: |
+        cd $(workspaces.source.path)
+        mkdir $(workspaces.dependencies.path)/gomod
+        export GOMODCACHE=$(workspaces.dependencies.path)/gomod
+        go mod download
+        # Install ko, for now just deps carry over to later steps.
+        # TODO(vaikas): Modify gopath so no need to install in
+        # later build step
+        go install "github.com/google/ko@latest"
+        cp -R $(workspaces.source.path) $(workspaces.dependencies.path)

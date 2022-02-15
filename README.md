@@ -220,25 +220,34 @@ pipeline pieces. This is very rough beginning of a proper Python pipeline and is
 meant to demonstrate breaking the large build into multiple steps and providing
 attestations at each level via Tekton Chains.
 
-#### Install Dockerfile that Kaniko will use to build the app image
-```bash
-kubectl create configmap dockerfile --from-file=./docker/python/Dockerfile
-```
-
 #### Install all the tasks that our needed for the pipeline
 ```shell
 kubectl apply -f ./config/common/
-task.tekton.dev/git-clone configured
-task.tekton.dev/install-dockerfile created
-task.tekton.dev/kaniko created
-task.tekton.dev/list-dependencies created
-task.tekton.dev/install-python-dependencies created
-pipeline.tekton.dev/python-build-pipeline created
-task.tekton.dev/sbom-syft created
-task.tekton.dev/scan-trivy created
+kubectl apply -f ./config/python/
+kubectl apply -f ./config/go/
 ```
 
-Then run the pipeline with
+After this, you should have the following tasks and pipelines
+installed:
+
+```shell
+kubectl get tasks,pipelines
+NAME                                          AGE
+task.tekton.dev/git-clone                     91m
+task.tekton.dev/install-go-dependencies       91m
+task.tekton.dev/install-python-dependencies   91m
+task.tekton.dev/kaniko                        91m
+task.tekton.dev/ko-build-image                91m
+task.tekton.dev/list-dependencies             91m
+task.tekton.dev/sbom-syft                     91m
+task.tekton.dev/scan-trivy                    91m
+
+NAME                                        AGE
+pipeline.tekton.dev/go-build-pipeline       91m
+pipeline.tekton.dev/python-build-pipeline   91m
+```
+
+Then run the Python pipeline with
 
 GKE
 ```shell
@@ -354,7 +363,7 @@ curl http://fulcio.fulcio-system.svc:8080/api/v1/rootCert > ./fulcio-root.pem
 Now download the SBOM
 
 ```shell
-SIGSTORE_ROOT_FILE=./fulcio-root.pem COSIGN_EXPERIMENTAL=1 cosign download sbom --allow-insecure-registry  $IMAGE_ID > /tmp/sbom
+COSIGN_EXPERIMENTAL=1 cosign download sbom --allow-insecure-registry  $IMAGE_ID > /tmp/sbom
 ```
 
 Get the trivy scan result:
