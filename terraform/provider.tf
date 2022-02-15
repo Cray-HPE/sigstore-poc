@@ -1,6 +1,5 @@
 data "google_container_cluster" "primary" {
-  depends_on = [google_container_cluster.primary]
-  name       = google_container_cluster.primary.name
+  name = google_container_cluster.primary.name
 }
 
 provider "helm" {
@@ -21,6 +20,7 @@ provider "google" {
   region  = var.DEFAULT_LOCATION
   zone    = var.CLUSTER_LOCATION
 }
+
 
 provider "kubernetes" {
   host  = google_container_cluster.primary.endpoint

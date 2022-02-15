@@ -75,4 +75,8 @@ variable "tk_chains_local" {
   description = "Path to local tekton chains helm chart"
 }
 
+variable "SIGSTORE_HELM_PATH" {
+  type        = string
+  description = "Path to local sigstore helm chart"
+}
 

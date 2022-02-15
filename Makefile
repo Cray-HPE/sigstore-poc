@@ -3,7 +3,7 @@ KIND_LOG_LEVEL=6
 WORKSPACE_ID ?= $(shell cd terraform/ && terraform workspace show)
 include .env
 
-tk_chains_helm_chart_version="0.2.0"
+tk_chains_helm_chart_version="0.2.2"
 tk_dashboard_helm_chart_version="0.2.0"
 tk_pl_helm_chart_version="v0.2.0"
 
@@ -13,7 +13,7 @@ dev_cluster:
 	 kind create cluster \
         --verbosity=${KIND_LOG_LEVEL} \
         --name ${KIND_CLUSTER_NAME} \
-        --config ./config/kind.yaml \
+        --config ./kind.yaml \
         --retain
 
 delete_cluster:
@@ -69,6 +69,7 @@ tf_plan:
 	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
 	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
 	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
+	-var="SIGSTORE_HELM_PATH"="${SIGSTORE_HELM_PATH}" \
 	-var="config_context=${K8S_CONTEXT}" -var="workspace_id=${WORKSPACE_ID}" \
 	-out=plan.out
 
@@ -78,6 +79,7 @@ tf_apply:
 	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
 	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
 	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
+	-var="SIGSTORE_HELM_PATH"="${SIGSTORE_HELM_PATH}" \
 	-var="workspace_id=${WORKSPACE_ID}" \
 	-var="config_context=${K8S_CONTEXT}" \
 	-auto-approve
@@ -94,6 +96,7 @@ tf_target_destroy:
     	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
     	-var="workspace_id=${WORKSPACE_ID}" \
     	-var="config_context=${K8S_CONTEXT}" \
+    	-var="SIGSTORE_HELM_PATH"="${SIGSTORE_HELM_PATH}" \
 		-target=google_container_cluster.primary \
 		-target=google_service_account.gke-user \
 		-target=google_project_iam_member.gcr_member \
@@ -105,6 +108,7 @@ tf_destroy:
 	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
 	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
 	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
+	-var="SIGSTORE_HELM_PATH"="${SIGSTORE_HELM_PATH}" \
 	-var="workspace_id=${WORKSPACE_ID}" \
 	-var="config_context=${K8S_CONTEXT}" \
 	-auto-approve

@@ -1,7 +1,3 @@
-resource "google_container_registry" "registry" {
-  project  = var.PROJECT_ID
-  location = "US"
-}
 
 resource "google_service_account" "gke_user" {
   account_id   = "gke-user-${var.workspace_id}"

@@ -13,7 +13,9 @@ resource "google_privateca_ca_pool" "default" {
       allow_config_based_issuance = true
     }
   }
-
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "google_privateca_certificate_authority" "default" {
