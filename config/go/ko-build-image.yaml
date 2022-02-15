@@ -19,7 +19,8 @@ spec:
       image: golang:1.17.7-bullseye
       script: |
         cd $(workspaces.source.path)/source
+        export GOMODCACHE=$(workspaces.source.path)/gomod
+        # TODO(vaikas): This should be set up in earlier step.
         go install "github.com/google/ko@latest"
-        DIGESTS=`GOMODCACHE=$(workspaces.source.path)/gomod KO_DOCKER_REPO=$(params.KO_DOCKER_REPO) ko publish $(params.MAIN_DIR)`
-        echo "DIGEST: $(DIGESTS)"
-        echo -n $(DIGESTS) > /tekton/results/DIGESTS
+        export KO_DOCKER_REPO=$(params.KO_DOCKER_REPO)
+        ko publish $(params.MAIN_DIR) | tee /tekton/results/DIGESTS

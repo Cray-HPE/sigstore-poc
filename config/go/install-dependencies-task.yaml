@@ -14,6 +14,10 @@ spec:
       script: |
         cd $(workspaces.source.path)
         mkdir $(workspaces.dependencies.path)/gomod
-        GOMODCACHE=$(workspaces.dependencies.path)/gomod
-        GOMODCACHE=$(workspaces.dependencies.path)/gomod go mod download
+        export GOMODCACHE=$(workspaces.dependencies.path)/gomod
+        go mod download
+        # Install ko, for now just deps carry over to later steps.
+        # TODO(vaikas): Modify gopath so no need to install in
+        # later build step
+        go install "github.com/google/ko@latest"
         cp -R $(workspaces.source.path) $(workspaces.dependencies.path)
