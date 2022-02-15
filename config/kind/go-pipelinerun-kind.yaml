@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: shared-task-storage
+  name: go-shared-task-storage
 spec:
   resources:
     requests:
@@ -46,7 +46,7 @@ spec:
   workspaces:
   - name: git-source # must match workspace name in Pipeline
     persistentVolumeClaim:
-      claimName: shared-task-storage # this PVC must already exist
+      claimName: go-shared-task-storage # this PVC must already exist
   - name: dependencies # must match workspace name in Pipeline
     persistentVolumeClaim:
       claimName: go-dependencies-storage # this PVC must already exist
