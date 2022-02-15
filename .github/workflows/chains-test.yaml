@@ -29,20 +29,41 @@ jobs:
       run: |
         ./hack/kind/setup-kind.sh
 
-    - name: Install all the everythings
+    - name: Run the Python pipeline
       timeout-minutes: 10
       run: |
         kubectl apply -f ./config/common
         kubectl apply -f ./config/python
-        # kubectl apply -f ./config/go
 
         # Give s a little time for things to spin up
         sleep 5
 
-        kubectl apply -f ./config/kind/
+        kubectl apply -f ./config/kind/python-pipelinerun-kind.yaml
 
         echo "Waiting for the pipelinerun to complete..."
         kubectl wait --timeout 15m --for=condition=Succeeded pipelineruns --all
+
+    - name: Run the Go pipeline
+      timeout-minutes: 10
+      run: |
+        kubectl apply -f ./config/go
+
+        # Give s a little time for things to spin up
+        sleep 5
+
+        kubectl apply -f ./config/kind/go-pipelinerun-kind.yaml
+
+        echo "Waiting for the pipelinerun to complete..."
+        kubectl wait --timeout 15m --for=condition=Succeeded pipelineruns --all
+
+    - name: Collect Pipelineruns diagnostics
+      if: ${{ failure() }}
+      run: |
+        for x in $(kubectl get pipelineruns -oname); do
+          echo "::group:: describe $x"
+          kubectl describe $x
+          echo '::endgroup::'
+        done
 
     - name: Collect Taskrun diagnostics
       if: ${{ failure() }}
@@ -62,15 +83,6 @@ jobs:
           echo '::endgroup::'
         done
 
-    - name: Collect Pipelineruns diagnostics
-      if: ${{ failure() }}
-      run: |
-        for x in $(kubectl get pipelineruns -oname); do
-          echo "::group:: describe $x"
-          kubectl describe $x
-          echo '::endgroup::'
-        done
-
     - name: Collect node diagnostics
       if: ${{ failure() }}
       run: |
@@ -83,7 +95,7 @@ jobs:
     - name: Collect pod diagnostics
       if: ${{ failure() }}
       run: |
-        for ns in fulcio-system rekor-system trillian-system ctlog-system; do
+        for ns in default fulcio-system rekor-system trillian-system ctlog-system; do
           kubectl get pods -n${ns}
 
           for x in $(kubectl get pods -n${ns} -oname); do
