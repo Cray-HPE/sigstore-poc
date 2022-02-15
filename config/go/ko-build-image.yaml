@@ -20,4 +20,4 @@ spec:
       script: |
         cd $(workspaces.source.path)/source
         go install "github.com/google/ko@latest"
-        GOMODCACHE=$(workspaces.source.path)/gomod KO_DOCKER_REPO=$(params.KO_DOCKER_REPO) ko publish $(params.MAIN_DIR) | tee /tekton/results/IMAGE-DIGEST
+        GOMODCACHE=$(workspaces.source.path)/gomod KO_DOCKER_REPO=$(params.KO_DOCKER_REPO) ko publish $(params.MAIN_DIR) | tee /tekton/results/DIGESTS
