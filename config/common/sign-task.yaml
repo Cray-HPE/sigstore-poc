@@ -35,6 +35,7 @@ spec:
       # Use the Fulcio URL provided by the refresher.
       "--fulcio-url", "$(params['dev.chainguard.refresher.fulcio-endpoint'])",
       "--force",
+      "--allow-insecure-registry",
       "$(params['IMAGE'])",
     ]
     env:
