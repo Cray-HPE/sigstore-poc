@@ -16,13 +16,21 @@ spec:
       description: Where the dependencies and source code are.
   steps:
     - name: ko-build-image
-      image: golang:1.17.7-bullseye
+      image: ghcr.io/google/ko:0187841b164187cd835eb96519d5e282d69ca688
+      env:
+        - name: KO_DOCKER_REPO
+          value: $(params.KO_DOCKER_REPO)
+        - name: GOMODCACHE
+          value: $(workspaces.source.path)/gomod
+      resources:
+        requests:
+          memory: 1Gi
+          cpu: 1
+        limits:
+          memory: 2Gi
+          cpu: 1
       script: |
         cd $(workspaces.source.path)/source
-        export GOMODCACHE=$(workspaces.source.path)/gomod
-        # TODO(vaikas): This should be set up in earlier step.
-        go install "github.com/google/ko@latest"
-        export KO_DOCKER_REPO=$(params.KO_DOCKER_REPO)
         # Strip the trailing newline so hilarity will not ensue in
         # following tasks.
         ko publish $(params.MAIN_DIR) | tr -d '\n' | tee /tekton/results/DIGESTS
