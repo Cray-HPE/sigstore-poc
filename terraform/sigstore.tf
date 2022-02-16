@@ -2,7 +2,7 @@ resource "helm_release" "sigstore_scaffold" {
   timeout = "300"
   name             = "sigstore-scaffold"
   chart            = "${var.SIGSTORE_HELM_PATH}/charts/scaffold"
-  version          = "0.1.1"
+  version          = "0.1.2"
   force_update     = true
   cleanup_on_fail  = true
   dependency_update = true
@@ -20,7 +20,7 @@ resource "helm_release" "sigstore_scaffold" {
   }
   set {
     name  = "fulcio.server.args.gcp_private_ca_parent"
-    value = google_privateca_certificate_authority.default.name
+    value = google_privateca_ca_pool.default.id
   }
   set {
     name  = "fulcio.server.serviceAccount.mountToken"
