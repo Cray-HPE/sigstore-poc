@@ -23,4 +23,6 @@ spec:
         # TODO(vaikas): This should be set up in earlier step.
         go install "github.com/google/ko@latest"
         export KO_DOCKER_REPO=$(params.KO_DOCKER_REPO)
-        ko publish $(params.MAIN_DIR) | tee /tekton/results/DIGESTS
+        # Strip the trailing newline so hilarity will not ensue in
+        # following tasks.
+        ko publish $(params.MAIN_DIR) | tr -d '\n' | tee /tekton/results/DIGESTS
