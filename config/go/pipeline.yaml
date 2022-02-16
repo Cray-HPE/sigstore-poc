@@ -94,9 +94,6 @@ spec:
           value: $(params.rekor-endpoint)
         - name: dev.chainguard.refresher.fulcio-endpoint
           value: $(params.fulcio-endpoint)
-    # TODO(vaikas): For some reason this is failing locally with:
-    # 2022-02-15T20:01:50.759Z	FATAL	scan error: unable to initialize a scanner: unable to initialize a docker scanner: failed to parse the image name: could not parse reference: registry.local:5000/knative/gotest/cmd-393a2f52878a8695b66b1ca0f09a1138@sha256:29be25e5ef42e24c2506f93ba94e1deed981a10f1896d32d5dc1bde2d2b626a2
-    # But it does not happen when running trivy binary, or docker run same version.
     - name: trivy-scan
       taskRef:
         name: scan-trivy
