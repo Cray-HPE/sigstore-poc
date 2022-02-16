@@ -28,6 +28,10 @@ spec:
     - name: rekor-endpoint
       description: Rekor endpoint
       default: "http://rekor.rekor-system.svc"
+  results:
+    - name: IMAGE-DIGEST
+      description: Digest of the image that was created
+      value: $(tasks.source-to-image.results.DIGESTS)
   workspaces:
     - name: git-source
     - name: dependencies
@@ -81,7 +85,7 @@ spec:
       - source-to-image
       params:
         - name: IMAGE
-          value: tasks.source-to-image.results.DIGESTS
+          value: $(tasks.source-to-image.results.DIGESTS)
         - name: COSIGN_REPOSITORY
           value: $(params.COSIGN_REPOSITORY)
         - name: SIGSTORE_CT_LOG_PUBLIC_KEY_FILE
