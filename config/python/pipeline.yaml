@@ -17,6 +17,12 @@ spec:
       description: Requirements file for running pip.
     - name: DOCKERFILE
       description: Dockerfile in the original source repo to use for building the image with.
+    - name: COSIGN_REPOSITORY
+      type: string
+      default: ""
+    - name: SIGSTORE_CT_LOG_PUBLIC_KEY_FILE
+      type: string
+      default: ""
     - name: fulcio-endpoint
       description: Fulcio endpoint
       default: "http://fulcio.fulcio-system.svc"
@@ -24,9 +30,10 @@ spec:
       description: Rekor endpoint
       default: "http://rekor.rekor-system.svc"
   results:
-    - name: IMAGES
+    - name: IMAGE-DIGEST
       description: Digest of the image that was created
-      value: $(params.imageUrl)@$(tasks.source-to-image.results.IMAGE-DIGEST)
+      #value: $(params.imageUrl)@$(tasks.source-to-image.results.IMAGE-DIGEST)
+      value: $(tasks.source-to-image.results.IMAGE-DIGEST)
   workspaces:
     - name: git-source
     - name: dependencies
@@ -76,6 +83,22 @@ spec:
           value: $(params.imageUrl):$(params.imageTag)
         - name: DOCKERFILE
           value: $(params.DOCKERFILE)
+    - name: sign-image
+      taskRef:
+        name: sign-image
+      runAfter:
+      - source-to-image
+      params:
+        - name: IMAGE
+          value: $(params.imageUrl)@$(tasks.source-to-image.results.IMAGE-DIGEST)
+        - name: COSIGN_REPOSITORY
+          value: $(params.COSIGN_REPOSITORY)
+        - name: SIGSTORE_CT_LOG_PUBLIC_KEY_FILE
+          value: $(params.SIGSTORE_CT_LOG_PUBLIC_KEY_FILE)
+        - name: dev.chainguard.refresher.rekor-endpoint
+          value: $(params.rekor-endpoint)
+        - name: dev.chainguard.refresher.fulcio-endpoint
+          value: $(params.fulcio-endpoint)
     - name: generate-sbom
       taskRef:
         name: sbom-syft

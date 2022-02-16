@@ -35,8 +35,10 @@ spec:
       value: "main"
     - name: MAIN_DIR
       value: "./cmd"
+    - name: SIGSTORE_CT_LOG_PUBLIC_KEY_FILE
+      value: "/data/ctlog-public.pem"
     - name: KO_DOCKER_REPO
-      value: registry.local:5000/knative/gotest
+      value: registry.local:5000/knative
     - name: fulcio-endpoint
       value: "http://fulcio.fulcio-system.svc"
     - name: rekor-endpoint
