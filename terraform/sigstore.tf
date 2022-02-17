@@ -1,8 +1,8 @@
 resource "helm_release" "sigstore_scaffold" {
   timeout           = "300"
   name              = "sigstore-scaffold"
-  chart             = "${var.SIGSTORE_HELM_PATH}/charts/scaffold"
-  version           = "0.1.2"
+  chart             = "${var.SIGSTORE_HELM_LOCAL_PATH}/charts/scaffold"
+  version           = var.SIGSTORE_HELM_VERSION
   force_update      = true
   cleanup_on_fail   = true
   dependency_update = true
@@ -26,7 +26,7 @@ resource "helm_release" "sigstore_scaffold" {
     name  = "fulcio.server.serviceAccount.mountToken"
     value = "true"
   }
-  set {
+  set { #Requires for SA to assume to GCP SA
     name  = "fulcio.server.serviceAccount.annotations.iam\\.gke\\.io\\/gcp-service-account"
     value = google_service_account.gke_workload.email
   }

@@ -1,5 +1,6 @@
+# CA pool to use for GCP CA services for Fulcio
 resource "google_privateca_ca_pool" "default" {
-  name     = "sigstore-poc-${var.workspace_id}"
+  name     = "sigstore-poc-${var.WORKSPACE_ID}"
   location = var.DEFAULT_LOCATION
   tier     = "DEVOPS"
   publishing_options {
@@ -18,9 +19,10 @@ resource "google_privateca_ca_pool" "default" {
   }
 }
 
+# Certificate Authority for Fulcio to requests certs from
 resource "google_privateca_certificate_authority" "default" {
   pool                     = google_privateca_ca_pool.default.name
-  certificate_authority_id = "sigstore-${var.PROJECT_ID}-${var.workspace_id}"
+  certificate_authority_id = "sigstore-${var.PROJECT_ID}-${var.WORKSPACE_ID}"
   location                 = var.DEFAULT_LOCATION
   project                  = var.PROJECT_ID
 
@@ -63,6 +65,8 @@ resource "google_privateca_certificate_authority" "default" {
   ]
 }
 
+
+# Allows the createcerts k8s SA to the assume the google SA
 resource "google_service_account_iam_member" "createcerts_account_iam" {
   role               = "roles/iam.workloadIdentityUser"
   member             = "serviceAccount:${var.PROJECT_ID}.svc.id.goog[fulcio-system/createcerts]"
@@ -70,6 +74,7 @@ resource "google_service_account_iam_member" "createcerts_account_iam" {
   depends_on         = [google_service_account.gke_workload]
 }
 
+# Allows the Fulcio k8s SA to the assume the google SA
 resource "google_service_account_iam_member" "fulcio_account_iam" {
   role               = "roles/iam.workloadIdentityUser"
   member             = "serviceAccount:${var.PROJECT_ID}.svc.id.goog[fulcio-system/fulcio]"

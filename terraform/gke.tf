@@ -1,22 +1,25 @@
-
+# Service Account for GKE nodes
 resource "google_service_account" "gke_user" {
-  account_id   = "gke-user-${var.workspace_id}"
+  account_id   = "gke-user-${var.WORKSPACE_ID}"
   display_name = "GKE Service Account"
   project      = var.PROJECT_ID
 }
 
+# IAM permissions to push to ECR
 resource "google_project_iam_member" "gcr_member" {
   project = var.PROJECT_ID
   role    = "roles/storage.objectViewer"
   member  = "serviceAccount:${google_service_account.gke_user.email}"
 }
 
+# Services account for GKE workloads, fulcio etc.
 resource "google_service_account" "gke_workload" {
-  account_id   = "${var.workspace_id}-user-workload"
+  account_id   = "${var.WORKSPACE_ID}-user-workload"
   display_name = "GKE Service Account Workload user"
   project      = var.PROJECT_ID
 }
 
+# Allow the workload SA to
 resource "google_service_account_iam_member" "workload_account_iam" {
   role               = "roles/iam.workloadIdentityUser"
   member             = "serviceAccount:${var.PROJECT_ID}.svc.id.goog[default/gke-user]"
@@ -48,7 +51,7 @@ resource "kubernetes_service_account" "gcr" {
 }
 
 resource "google_container_cluster" "primary" {
-  name               = "chainguard-dev-${var.workspace_id}"
+  name               = "chainguard-dev-${var.WORKSPACE_ID}"
   location           = var.CLUSTER_LOCATION != "" ? var.CLUSTER_LOCATION : var.DEFAULT_LOCATION
   project            = var.PROJECT_ID
   initial_node_count = 2
