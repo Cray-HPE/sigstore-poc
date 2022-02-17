@@ -5,13 +5,25 @@ variable "trillian_sa_names" {
 
 resource "helm_release" "sigstore_scaffold" {
   depends_on        = [google_sql_database.database_trillian, google_container_cluster.primary]
-  timeout           = "300"
+  timeout           = "150"
   name              = "sigstore-scaffold"
   chart             = "${var.SIGSTORE_HELM_LOCAL_PATH}/charts/scaffold"
   version           = var.SIGSTORE_HELM_VERSION
   force_update      = true
   cleanup_on_fail   = true
   dependency_update = true
+  set {
+    name  = "trillian.mysql.auth.rootPassword"
+    value = var.TRILLIAN_PASSWORD
+  }
+  set {
+    name  = "trillian.mysql.auth.password"
+    value = var.TRILLIAN_PASSWORD
+  }
+  set {
+    name  = "trillian.mysql.auth.username"
+    value = var.TRILLIAN_USERNAME
+  }
   set {
     name  = "trillian.mysql.gcp.enabled"
     value = "true"

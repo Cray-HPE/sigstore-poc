@@ -1,6 +1,5 @@
 data "google_compute_network" "default" {
   name = "default"
-
 }
 
 resource "google_service_account" "dbuser_trillian" {
@@ -65,14 +64,23 @@ resource "google_sql_user" "users_trillian" {
   type     = "CLOUD_IAM_SERVICE_ACCOUNT"
 }
 
-// This is what clients use, it's ok to use password here, because gatekeeper
-// is the SQL auth proxy below.
+variable "TRILLIAN_USERNAME" {
+  default = "mysql"
+  type        = string
+  description = "trillian client mysql username"
+}
+
+variable "TRILLIAN_PASSWORD" {
+  type        = string
+  description = "trillian client mysql password"
+}
+
 resource "google_sql_user" "trillian" {
   project  = var.PROJECT_ID
-  name     = "trillian"
+  name     = var.TRILLIAN_USERNAME
   instance = google_sql_database_instance.trillian.name
   host     = "%"
-  password = "trillian"
+  password = var.TRILLIAN_PASSWORD
 }
 
 // Actual Trillian Database
