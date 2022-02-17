@@ -56,7 +56,7 @@ resource "google_privateca_certificate_authority" "default" {
 
   }
   lifecycle {
-     prevent_destroy = true
+    prevent_destroy = true
   }
   depends_on = [
     google_privateca_ca_pool.default

@@ -1,10 +1,10 @@
 resource "helm_release" "sigstore_scaffold" {
-  timeout = "300"
-  name             = "sigstore-scaffold"
-  chart            = "${var.SIGSTORE_HELM_PATH}/charts/scaffold"
-  version          = "0.1.2"
-  force_update     = true
-  cleanup_on_fail  = true
+  timeout           = "300"
+  name              = "sigstore-scaffold"
+  chart             = "${var.SIGSTORE_HELM_PATH}/charts/scaffold"
+  version           = "0.1.2"
+  force_update      = true
+  cleanup_on_fail   = true
   dependency_update = true
   set {
     name  = "rekor.server.ingress.enabled"

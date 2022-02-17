@@ -9,7 +9,6 @@ resource "helm_release" "tekton_pipelines" {
   cleanup_on_fail  = true
 }
 
-
 resource "helm_release" "tekton_dashboard" {
   depends_on       = [helm_release.tekton_pipelines, google_container_cluster.primary]
   name             = "tekton-dashboard"
@@ -20,7 +19,6 @@ resource "helm_release" "tekton_dashboard" {
   force_update     = true
   cleanup_on_fail  = true
 }
-
 
 resource "helm_release" "tekton_chains" {
   depends_on       = [helm_release.tekton_pipelines, google_container_cluster.primary]
