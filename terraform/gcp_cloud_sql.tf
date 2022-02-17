@@ -25,21 +25,16 @@ resource "google_project_iam_member" "gcs_member_trillian" {
 resource "google_service_account_iam_member" "gke_sa_iam_member_trillian" {
   service_account_id = google_service_account.dbuser_trillian.name
   role               = "roles/iam.workloadIdentityUser"
-  member             = "serviceAccount:${var.PROJECT_ID}.svc.id.goog[trillian-system/trillian]"
+  count              = length(var.trillian_sa_names)
+  member             = "serviceAccount:${var.PROJECT_ID}.svc.id.goog[trillian-system/${var.trillian_sa_names[count.index]}]"
   depends_on         = [google_service_account.dbuser_trillian]
 }
 
-resource "google_service_account_iam_member" "gke_sa_iam_member_createdb" {
-  service_account_id = google_service_account.dbuser_trillian.name
-  role               = "roles/iam.workloadIdentityUser"
-  member             = "serviceAccount:${var.PROJECT_ID}.svc.id.goog[trillian-system/createdb]"
-  depends_on         = [google_service_account.dbuser_trillian]
-}
 
 resource "google_sql_database_instance" "trillian" {
   project          = var.PROJECT_ID
   database_version = "MYSQL_8_0"
-  region           =  var.CLUSTER_LOCATION != "" ? var.CLUSTER_LOCATION : var.DEFAULT_LOCATION
+  region           = var.DEFAULT_LOCATION
 
   settings {
     tier = "db-g1-small"
@@ -50,12 +45,11 @@ resource "google_sql_database_instance" "trillian" {
     }
 
     user_labels = {
-      "chainguard-dbtype": "trillian",
+      "chainguard-dbtype" : "trillian",
     }
 
     ip_configuration {
-      ipv4_enabled    = true
-      private_network = data.google_compute_network.default.id
+      ipv4_enabled = true
     }
   }
 

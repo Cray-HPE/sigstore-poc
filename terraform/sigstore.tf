@@ -1,4 +1,10 @@
+variable "trillian_sa_names" {
+  type    = list(string)
+  default = ["trillian-checktree", "trillian-logsigner", "trillian-createdb", "trillian-logserver"]
+}
+
 resource "helm_release" "sigstore_scaffold" {
+  depends_on        = [google_sql_database.database_trillian, google_container_cluster.primary]
   timeout           = "300"
   name              = "sigstore-scaffold"
   chart             = "${var.SIGSTORE_HELM_LOCAL_PATH}/charts/scaffold"
@@ -6,16 +12,24 @@ resource "helm_release" "sigstore_scaffold" {
   force_update      = true
   cleanup_on_fail   = true
   dependency_update = true
-  set{
-    name  = "trillian.logServer.serviceAccount.name"
-    value = "trillian"
+  set {
+    name  = "trillian.mysql.gcp.enabled"
+    value = "true"
   }
-  set{
-    name  = "trillian.logSigner.serviceAccount.name"
-    value = "trillian"
+  set {
+    name  = "trillian.mysql.gcp.instance"
+    value = google_sql_database_instance.trillian.connection_name
+  }
+  set {
+    name  = "trillian.mysql.hostname"
+    value = "localhost"
   }
   set {
     name  = "trillian.logServer.serviceAccount.annotations.iam\\.gke\\.io\\/gcp-service-account"
+    value = google_service_account.dbuser_trillian.email
+  }
+  set {
+    name  = "trillian.logSigner.serviceAccount.annotations.iam\\.gke\\.io\\/gcp-service-account"
     value = google_service_account.dbuser_trillian.email
   }
   set {
