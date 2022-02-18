@@ -110,7 +110,7 @@ Now, you'll be able to test Rekor.
 curl http://rekor.rekor-system.svc:8080/api/v1/log/
 ```
 
-Running the above should generate the output that resembles the following. 
+Running the above should generate output that resembles the following. 
 
 ```
 {
