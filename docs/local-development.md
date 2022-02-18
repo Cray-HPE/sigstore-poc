@@ -1,8 +1,8 @@
 # Sigstore HPE POC
 
-Playground for building an example e2e pipeline using Tekton Pipelines, Chains, Dashboard, Sigstore, Rekor, Cosign, and Fulcio for Python and Kind, and/or GCP/GKE.
+Local development environment for exercising Tekton and Sigstore running on kind. There are two example pipelines, one for Python and one for Go.
 
-**NOTE** We have to use `--allow-insecure-registry` due to this [cosign bug](https://github.com/sigstore/cosign/issues/1405).
+**Note**: We have to use `--allow-insecure-registry` due to this [cosign bug](https://github.com/sigstore/cosign/issues/1405).
 
 ## Notes for macOS
 
@@ -10,15 +10,23 @@ You may hit file limits; you can run `sudo launchctl limit maxfiles 65536 200000
 
 The airplay receiver uses port 5000, which may need to be disabled. Further details via [Apple's developer forum](https://developer.apple.com/forums/thread/682332). Alternatively, you can manually modify the script and change the [REGISTRY_PORT](https://github.com/vaikas/sigstore-scaffolding/blob/main/hack/setup-mac-kind.sh#L19)
 
-# Set up Kubernetes cluster
+# Prerequisites
 
-We will set up the local Kubernetes cluster by running the `/hack/kind/setup-kind.sh` script.
+In order to run through this example, you will need the following installed:
+
+ * Docker
+ * [tkn cli](https://tekton.dev/docs/cli/)
+ * kubectl
+ * rekor-cli
+ * cosign
+
+# Setup Kubernetes cluster
+
+We will setup the local Kubernetes cluster by running the `/hack/kind/setup-kind.sh` script from the root of this repository.
 
 ```shell
 ./hack/kind/setup-kind.sh
 ```
-
-This setup will take a few minutes. Note that you will be prompted for your root password while running the setup script. 
 
 This script will set up a local Kubernetes kind cluster on your machine with:
 
@@ -27,7 +35,9 @@ This script will set up a local Kubernetes kind cluster on your machine with:
  * Tekton Chains / Pipelines
  * Tekton task for fetching GitHub sources
 
-**Note**: You may receive some errors similar to the following:
+This setup will take a few minutes. Note that you will be prompted for your root password while running the setup script. 
+
+**Note**: You may see some errors similar to the following while the script is running. This is fine.
 
 ```
 Error from server (InternalError): error when creating "https://storage.googleapis.com/tekton-releases/chains/latest/release.yaml": Internal error occurred: failed calling webhook "config.webhook.pipeline.tekton.dev": Post "https://tekton-pipelines-webhook.tekton-pipelines.svc:443/config-validation?timeout=10s": dial tcp 10.96.244.5:443: connect: connection refused
@@ -88,13 +98,13 @@ Pushing signature to: knative
 2022/02/10 22:57:56 Found index entry: e0beca412f78687deef90f1e7aacbe022d0968ec9c12dd36fb7374f0102e08a8
 ```
 
-We will need to set up port forwarding at this point. 
+We will need to setup port forwarding at this point.
 
 ```shell
 kubectl -n kourier-system port-forward service/kourier-internal 8080:80 &
 ```
 
-Now, you'll be able to test Rekor. 
+Now, you'll be able to test Rekor.
 
 ```bash
 curl http://rekor.rekor-system.svc:8080/api/v1/log/
@@ -113,30 +123,6 @@ Running the above should generate the output that resembles the following.
 At this point, we can move onto Tekton. 
 
 # Tekton overview
-
-> **Note** You may have to uninstall the Docker registry container between running the above scripts and the next because it spins up a registry container in a daemon mode. To clean a previously running registry, you can do one of these:
-
-> YOLO:
-
-> ```shell
-> docker rm -f `docker ps -a | grep 'registry:2' | awk -F " " '{print $1}'`
-> ```
-
-> Or, to check things first:
-
-> ```shell
-> > docker ps -a | grep registry
-```
-
-> You'll get ther running version of the registry, so remove it: 
-
-```
-> b1e3f3238f7a   registry:2                        "/entrypoint.sh /etc…"   15 minutes ago   Up 15 minutes               0.0.0.0:5000->5000/tcp, :::5000->5000/tcp   registry.local
-> ```
-
-> ```shell
-> docker rm -f b1e3f3238f7a
-> ```
 
 ## Network access
 
@@ -166,15 +152,33 @@ Root Hash: 062e2fa50e2b523f9cfd4eadc4b67745436226d64bf9799d57c5dc023681c4b8
 Timestamp: 2022-02-04T22:09:46Z
 ```
 
-If you run through this example more than once, you can remove the `~/.rekor/state.json` file in order to get verification output again. 
+If you run through this example more than once, you can remove the `/.rekor/state.json` file in order to get verification output again. Or alternatively you can invoke rekor-cli with `--store_tree_state=false` flag. Otherwise rekor-cli will complain that the state of the tree is suspect (which it is, since we recreated it :) ).
 
-# Tekton tasks
+### Certificates
+
+There are two certificates that we need; the CT Log and Fulcio root certs. Note that if you are switching back and forth between public and your instance, you may not want to export these variables (or unexport them when switching to public instances).
+
+Get the CT Log public certificate:
+
+```shell
+kubectl -n ctlog-system get secrets ctlog-public-key -o=jsonpath='{.data.public}' | base64 -d > ./ctlog-public.pem
+export SIGSTORE_CT_LOG_PUBLIC_KEY_FILE=./ctlog-public.pem
+```
+
+Now get the Fulcio root certificate:
+
+```shell
+kubectl -n fulcio-system get secrets fulcio-secret -ojsonpath='{.data.cert}' | base64 -d > ./fulcio-root.pem
+export SIGSTORE_ROOT_FILE=./fulcio-root.pem
+```
+
+# Running through Tekton tasks
 
 Once you've installed the above, you can install the Tekton task and pipeline pieces. This is a very rough beginning of a proper Python pipeline and is meant to demonstrate breaking the large build into multiple steps and providing attestations at each level via Tekton Chains.
 
-## Install tasks for pipeline
+## Install tasks and pipelines
 
-Run the following with `kubectl` to install all the tasks that are needed for the pipeline. After each command, you should receive output of tasks being created. 
+Run the following with `kubectl` to install all the tasks that are needed for the pipeline
 
 ```shell
 kubectl apply -f ./config/common/
@@ -207,7 +211,11 @@ pipeline.tekton.dev/go-build-pipeline       38s
 pipeline.tekton.dev/python-build-pipeline   44s
 ```
 
-Next, run the Python pipeline.
+We'll run the Python pipeline next. 
+
+## Run Python pipeline
+
+Run the python pipeline like so:
 
 ```shell
 kubectl apply -f ./config/kind/python-pipelinerun-kind.yaml
@@ -216,12 +224,11 @@ kubectl apply -f ./config/kind/python-pipelinerun-kind.yaml
 The pipeline should complete successfully, which you can follow along by checking the pipeline runs.
 
 ```shell
-kubectl get pipelineruns
+kubectl get pipelineruns -w
 ```
 
 ```
-NAME                      SUCCEEDED   REASON    STARTTIME   COMPLETIONTIME
-bare-build-pipeline-run   Unknown     Running   11s
+bare-build-pipeline-run   True        Succeeded   6h13m       6h12m
 ```
 
 You can view the logs of the pipeline run with the [tkn cli](https://tekton.dev/docs/cli/).
@@ -230,7 +237,7 @@ You can view the logs of the pipeline run with the [tkn cli](https://tekton.dev/
 tkn pipelineruns logs bare-build-pipeline-run -f
 ```
 
-If you have Tekton dashboard installed, you can run the below to view it. 
+If you have Tekton dashboard installed, you can run the below to view it.
 
 ```bash
 kubectl port-forward svc/tekton-dashboard 9097:9097 -n tekton-pipelines
@@ -252,75 +259,31 @@ When the pipeline finishes, you'll receive the following output in the logs.
 
 ## Inspect results
 
-We also have an image that we create. This is a Python slim version that will only be used to install the requirements. After the installation completes, we grab the dependencies and copy them to `venv` for the Python script that will then run them.
+As part of the pipeline run we create a container image for it, sign it with Cosign, create an SBOM, and perform a Trivy scan for it.
 
-### Certificates
+To review the concise and clear overview of the pipeline run, use the tkn cli. 
 
-There are two certificates that we need; the CT Log and Fulcio root certs. Note that if you are switching back and forth between public and your instance, you may not want to export these variables.
+```
+tkn pr describe bare-build-pipeline-run
+```
 
-Get the CT Log: 
+You can review the digest in the **Results** section. To reduce cutting and pasting, let's grab it into an `ENV` variable for later steps:
 
 ```shell
-kubectl -n ctlog-system get secrets ctlog-public-key -o=jsonpath='{.data.public}' | base64 -d > ./ctlog-public.pem
-export SIGSTORE_CT_LOG_PUBLIC_KEY_FILE=./ctlog-public.pem
+IMAGE_ID=$(kubectl get taskruns bare-build-pipeline-run-source-to-image -o jsonpath='{.spec.params[0].value}' | awk -F ":" '{print $1":"$2}')@$(kubectl get taskruns bare-build-pipeline-run-source-to-image -o jsonpath='{.status.taskResults[0].value}')
 ```
 
-Now get the Fulcio root:
+You should get output that looks something like so:
 
 ```shell
-kubectl -n fulcio-system get secrets fulcio-secret -ojsonpath='{.data.cert}' | base64 -d > ./fulcio-root.pem
-export SIGSTORE_ROOT_FILE=./fulcio-root.pem
-```
-
-Next, grab the image that was produced by getting the latest source-to-image task run that has successfully completed.
-
-```bash
-kubectl get  taskruns  -l  "tekton.dev/pipeline"="python-build-pipeline" -l "tekton.dev/pipelineTask"="source-to-image"
-```
-
-```
-NAME                                         SUCCEEDED   REASON      STARTTIME   COMPLETIONTIME
-build-pipeline-run-f57dc-source-to-image     True        Succeeded   3h32m       3h31m
-build-pipeline-run-r-48wwv-source-to-image   False       Failed      3h53m       3h53m
-build-pipeline-run-r-ld4qn-source-to-image   False       Failed      4h2m        4h
-build-pipeline-run-r-pbpcg-source-to-image   True        Succeeded   3h47m       3h46m
-build-pipeline-run-r-qtgfx-source-to-image   False       Failed      3h57m       3h57m
-build-pipeline-run-r-s9qgp-source-to-image   True        Succeeded   3h44m       3h43m
-build-pipeline-run-r-wp4rj-source-to-image   True        Succeeded   3h50m       3h49m
-build-pipeline-run-rvn62-source-to-image     True        Succeeded   3h38m       3h37m
-build-pipeline-run-source-to-image           False       Failed      4h12m       4h10m
-```
-
-```shell
-TASK_NAME=build-pipeline-run-f57dc-source-to-image
-```
-
-The source to image task will produce the image ID of the container it built and push to the registry.
-
-```shell
-IMAGE_ID=$(kubectl get taskruns ${TASK_NAME} -o jsonpath='{.spec.params[0].value}' | sed 's/:0.1//')@$(kubectl get taskruns ${TASK_NAME} -o jsonpath='{.status.taskResults[0].value}')
-```
-
-Example image id:
-
-```bash
 echo $IMAGE_ID
+registry.local:5000/knative/pythontest@sha256:aebbd2977c66b5a5f53fe9af2a52ae129203e560cb7480930535124874a6e3b1
 ```
 
-```
-gcr.io/chainguard-dev/pythontest@sha256:c089acd03a21830c329d70f61cefa2a29c43e59ebc848581043b631451dfffa7
-```
-
-Now, get the SBOM. We'll pull down the Root CA from Fulcio. Make sure you have set up [Network Access](#network-access).
-
-```bash
-curl http://fulcio.fulcio-system.svc:8080/api/v1/rootCert > ./fulcio-root.pem
-```
-
-Ensure that the image was signed.
+Verify that the image was signed.
 
 ```shell
-SIGSTORE_ROOT_FILE=./fulcio-root.pem COSIGN_EXPERIMENTAL=1 cosign verify --allow-insecure-registry --rekor-url=http://rekor.rekor-system.svc:8080 --allow-insecure-registry $IMAGE_ID
+COSIGN_EXPERIMENTAL=1 cosign verify --allow-insecure-registry --rekor-url=http://rekor.rekor-system.svc:8080 --allow-insecure-registry $IMAGE_ID
 ```
 
 After running the above, you should get output similar to this.
@@ -336,19 +299,34 @@ The following checks were performed on each of these signatures:
   [{"critical":{"identity":{"docker-reference":"registry.local:5000/knative/pythontest"},"image":{"docker-manifest-digest":"sha256:63a<SNIPPED HERE FOR READABILITY>
 ```
 
-Now you can download the SBOM.
+Now, let's download the SBOM.
 
 ```shell
-COSIGN_EXPERIMENTAL=1 cosign download sbom --allow-insecure-registry  $IMAGE_ID > /tmp/sbom
+COSIGN_EXPERIMENTAL=1 cosign download sbom --allow-insecure-registry $IMAGE_ID > /tmp/sbom
+```
+
+You can look at the `/tmp/sbom` file and it should look like this:
+
+```
+SPDXVersion: SPDX-2.2
+DataLicense: CC0-1.0
+SPDXID: SPDXRef-DOCUMENT
+DocumentName: registry.local:5000/knative/pythontest@sha256:aebbd2977c66b5a5f53fe9af2a52ae129203e560cb7480930535124874a6e3b1
+DocumentNamespace: https://anchore.com/syft/image/registry.local:5000/knative/pythontest@sha256:aebbd2977c66b5a5f53fe9af2a52ae129203e560cb7480930535124874a6e3b1
+LicenseListVersion: 3.14
+Creator: Organization: Anchore, Inc
+Creator: Tool: syft-[not provided]
+Created: 2022-02-17T16:08:11Z
+.......
 ```
 
 Get the Trivy scan result.
 
 ```shell
-SIGSTORE_ROOT_FILE=./fulcio-root.pem COSIGN_EXPERIMENTAL=1 cosign verify-attestation --rekor-url=http://rekor.rekor-system.svc:8080 --allow-insecure-registry  $IMAGE_ID > /tmp/attestations
+COSIGN_EXPERIMENTAL=1 cosign verify-attestation --rekor-url=http://rekor.rekor-system.svc:8080 --allow-insecure-registry $IMAGE_ID > /tmp/attestations
 ```
 
-Finally, you should get this output that verifies everything was validated. 
+Finally, you should get this output that verifies everything was validated.
 
 ```shell
 Verification for gcr.io/chainguard-dev/pythontest@sha256:c089acd03a21830c329d70f61cefa2a29c43e59ebc848581043b631451dfffa7 --
@@ -359,9 +337,65 @@ The following checks were performed on each of these signatures:
   - Any certificates were verified against the Fulcio roots.
 ```
 
-At this point we can clean up our work. 
+Verify the Tekton Chains by choosing one of the steps. We can do this for any of the taskruns, but let's do the one that does the build. Tekton stores this information in the Taskrun annotations, so let's pull out the transparency entry.
 
 ```shell
-kind delete cluster --name sigstore
-docker rm -f `docker ps -a | grep 'registry:2' | awk -F " " '{print $1}'
+kubectl get taskruns bare-build-pipeline-run-source-to-image -ojsonpath='{.metadata.annotations.chains\.tekton\.dev/transparency}'
+```
+
+This should print something similar to the following.
+
+```
+kubectl get taskruns bare-build-pipeline-run-source-to-image -ojsonpath='{.metadata.annotations.chains\.tekton\.dev/transparency}'
+http://rekor.rekor-system.svc/api/v1/log/entries?logIndex=40%
+```
+
+We can then fetch the corresponding entry from the Rekor log with:
+
+```shell
+TRANSPARENCY_INDEX=$(kubectl get taskruns bare-build-pipeline-run-source-to-image -ojsonpath='{.metadata.annotations.chains\.tekton\.dev/transparency}' | awk -F "=" '{print $2}')
+rekor-cli --rekor_server http://rekor.rekor-system.svc:8080 get --log-index $TRANSPARENCY_INDEX > /tmp/transparency
+```
+
+We can then look at that file with `less`/`vi` and we can format the actual attestation nicely with this:
+
+```shell
+grep Attestation /tmp/transparency | awk -F " " '{print $2}' | base64 -d | jq -r .
+```
+
+The above should print something like this:
+
+```shell
+{
+  "_type": "https://in-toto.io/Statement/v0.1",
+  "predicateType": "https://slsa.dev/provenance/v0.2",
+  "subject": null,
+  "predicate": {
+    "builder": {
+      "id": "https://tekton.dev/chains/v2"
+    },
+.......
+```
+
+Chains also adds the signature and payload to annotations of a taskrun, and you can pull them out like this:
+
+```shell
+TASKRUN_UID=$(kubectl get taskruns bare-build-pipeline-run-source-to-image -ojsonpath='{.metadata.uid}')
+tkn tr describe --last -o jsonpath="{.metadata.annotations.chains\.tekton\.dev/signature-taskrun-$TASKRUN_UID}" > signature
+tkn tr describe --last -o jsonpath="{.metadata.annotations.chains\.tekton\.dev/payload-taskrun-$TASKRUN_UID}" | base64 -d > payload
+```
+
+***TODO(vaikas): THIS STEP DOES NOT WORK YET WITH INDEXING ISSUES***
+Then you can verify the integrity by running cosign again:
+
+```
+COSIGN_EXPERIMENTAL=1 cosign verify-blob --rekor-url=http://rekor.rekor-system.svc:8080 --allow-insecure-registry --signature ./signature ./payload
+```
+
+# Cleaning up
+
+To clean up the cluster as well as a local Docker registry daemon container, run `/hack/kind/teardown-kind.sh` script from the root of this repository.
+
+```shell
+./hack/kind/teardown-kind.sh
 ```
