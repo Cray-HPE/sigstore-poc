@@ -2,7 +2,7 @@
 
 Playground for building an example e2e pipeline using Tekton Pipelines, Chains, Dashboard, Sigstore, Rekor, Cosign, and Fulcio for Python and Kind, and/or GCP/GKE.
 
-**NOTE** We have to use `--allow-insecure-registry` due to this [cosign bug](https://github.com/sigstore/cosign/issues/1405)
+**NOTE** We have to use `--allow-insecure-registry` due to this [cosign bug](https://github.com/sigstore/cosign/issues/1405).
 
 ## Notes for macOS
 
@@ -10,13 +10,15 @@ You may hit file limits; you can run `sudo launchctl limit maxfiles 65536 200000
 
 The airplay receiver uses port 5000, which may need to be disabled. Further details via [Apple's developer forum](https://developer.apple.com/forums/thread/682332). Alternatively, you can manually modify the script and change the [REGISTRY_PORT](https://github.com/vaikas/sigstore-scaffolding/blob/main/hack/setup-mac-kind.sh#L19)
 
-# Setup Kubernetes cluster
+# Set up Kubernetes cluster
 
-We will setup the local Kubernetes cluster by running the `/hack/kind/setup-kind.sh` script.
+We will set up the local Kubernetes cluster by running the `/hack/kind/setup-kind.sh` script.
 
 ```shell
 ./hack/kind/setup-kind.sh
 ```
+
+This setup will take a few minutes. Note that you will be prompted for your root password while running the setup script. 
 
 This script will set up a local Kubernetes kind cluster on your machine with:
 
@@ -32,6 +34,19 @@ Error from server (InternalError): error when creating "https://storage.googleap
 ```
 
 They are due to some race conditions when installing Tekton components. There are retries built in, so as long things finish, it's ok. Cleaning those up will require some upstream work.
+
+Once you get output that ends in the `::endgroup::` line, you'll know this initial setup is completed. The last few lines of the output should resemble the following.
+
+```
+...
+configmap/dashboard-info created
+service/tekton-dashboard created
+deployment.apps/tekton-dashboard created
+clusterrolebinding.rbac.authorization.k8s.io/tekton-dashboard-tenant created
+::endgroup::
+```
+
+If you run `docker ps -a` at this point, you should have 3 containers, including a `registry.local`, a `sigstore-worker`, and a `sigstore-control-plane`. 
 
 ### Verify sigstore installs
 
@@ -56,7 +71,7 @@ kubectl logs $i
 done
 ```
 
-As an example (little snipped for readability), I saw this:
+A small snippet of the output you get should be similar to the following. 
 
 ```
 Generating ephemeral keys...
@@ -73,7 +88,7 @@ Pushing signature to: knative
 2022/02/10 22:57:56 Found index entry: e0beca412f78687deef90f1e7aacbe022d0968ec9c12dd36fb7374f0102e08a8
 ```
 
-We will need to setup port forwarding at this point. 
+We will need to set up port forwarding at this point. 
 
 ```shell
 kubectl -n kourier-system port-forward service/kourier-internal 8080:80 &
@@ -85,7 +100,7 @@ Now, you'll be able to test Rekor.
 curl http://rekor.rekor-system.svc:8080/api/v1/log/
 ```
 
-Running the above should generate the following output. 
+Running the above should generate the output that resembles the following. 
 
 ```
 {
@@ -151,7 +166,7 @@ Root Hash: 062e2fa50e2b523f9cfd4eadc4b67745436226d64bf9799d57c5dc023681c4b8
 Timestamp: 2022-02-04T22:09:46Z
 ```
 
-If you run through this example more than once, you can remove the `/.rekor/state.json` file in order to get verification output again. 
+If you run through this example more than once, you can remove the `~/.rekor/state.json` file in order to get verification output again. 
 
 # Tekton tasks
 
@@ -159,7 +174,7 @@ Once you've installed the above, you can install the Tekton task and pipeline pi
 
 ## Install tasks for pipeline
 
-Run the following with `kubectl` to install all the tasks that are needed for the pipeline
+Run the following with `kubectl` to install all the tasks that are needed for the pipeline. After each command, you should receive output of tasks being created. 
 
 ```shell
 kubectl apply -f ./config/common/
@@ -167,7 +182,7 @@ kubectl apply -f ./config/python/
 kubectl apply -f ./config/go/
 ```
 
-After these run, check to ensure what is installed.
+After these tasks are created, check to ensure what is installed.
 
 ```shell
 kubectl get tasks,pipelines
@@ -177,18 +192,19 @@ Ensure that your output matches the following tasks and pipelines.
 
 ```
 NAME                                          AGE
-task.tekton.dev/git-clone                     91m
-task.tekton.dev/install-go-dependencies       91m
-task.tekton.dev/install-python-dependencies   91m
-task.tekton.dev/kaniko                        91m
-task.tekton.dev/ko-build-image                91m
-task.tekton.dev/list-dependencies             91m
-task.tekton.dev/sbom-syft                     91m
-task.tekton.dev/scan-trivy                    91m
+task.tekton.dev/git-clone                     61s
+task.tekton.dev/install-go-dependencies       38s
+task.tekton.dev/install-python-dependencies   44s
+task.tekton.dev/kaniko                        61s
+task.tekton.dev/ko-build-image                38s
+task.tekton.dev/list-dependencies             61s
+task.tekton.dev/sbom-syft                     61s
+task.tekton.dev/scan-trivy                    61s
+task.tekton.dev/sign-image                    61s
 
 NAME                                        AGE
-pipeline.tekton.dev/go-build-pipeline       91m
-pipeline.tekton.dev/python-build-pipeline   91m
+pipeline.tekton.dev/go-build-pipeline       38s
+pipeline.tekton.dev/python-build-pipeline   44s
 ```
 
 Next, run the Python pipeline.
@@ -205,13 +221,13 @@ kubectl get pipelineruns
 
 ```
 NAME                      SUCCEEDED   REASON    STARTTIME   COMPLETIONTIME
-build-pipeline-run        Unknown     Running   29s
+bare-build-pipeline-run   Unknown     Running   11s
 ```
 
 You can view the logs of the pipeline run with the [tkn cli](https://tekton.dev/docs/cli/).
 
 ```shell
-tkn pipelineruns logs build-pipeline-run -f
+tkn pipelineruns logs bare-build-pipeline-run -f
 ```
 
 If you have Tekton dashboard installed, you can run the below to view it. 
@@ -220,7 +236,7 @@ If you have Tekton dashboard installed, you can run the below to view it.
 kubectl port-forward svc/tekton-dashboard 9097:9097 -n tekton-pipelines
 ```
 
-![Screenshot of Tekton dashboard](images/tekton-dashboards.png)
+![Screenshot of Tekton dashboard](../images/tekton-dashboards.png)
 
 When the pipeline finishes, you'll receive the following output in the logs.
 
@@ -232,7 +248,7 @@ When the pipeline finishes, you'll receive the following output in the logs.
 [source-to-image : digest-to-results] sha256:824e9a8a00d5915bc87e25316dfbb19dbcae292970b02a464e2da1a665c7d54b
 ```
 
-![Tekton pipeline](images/tekton-pipeline.png)
+![Tekton pipeline](../images/tekton-pipeline.png)
 
 ## Inspect results
 
@@ -346,6 +362,6 @@ The following checks were performed on each of these signatures:
 At this point we can clean up our work. 
 
 ```shell
-kind delete cluster --name sigstore`
+kind delete cluster --name sigstore
 docker rm -f `docker ps -a | grep 'registry:2' | awk -F " " '{print $1}'
 ```
