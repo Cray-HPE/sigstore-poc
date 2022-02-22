@@ -30,13 +30,19 @@ metadata:
 spec:
   params:
     - name: git-url
-      value: "https://github.com/Cray-HPE/csm.git"
+      value: "https://github.com/vaikas/hellopython.git"
     - name: git-revision
       value: "main"
     - name: imageUrl
       value: "registry.local:5000/knative/pythontest"
+    - name: SIGSTORE_CT_LOG_PUBLIC_KEY_FILE
+      value: "/data/ctlog-public.pem"
     - name: imageTag
       value: "0.1"
+    - name: REQUIREMENTSFILE
+      value: requirements.txt
+    - name: DOCKERFILE
+      value: ./source/docker/Dockerfile
     - name: fulcio-endpoint
       value: "http://fulcio.fulcio-system.svc"
     - name: rekor-endpoint
@@ -50,9 +56,3 @@ spec:
   - name: dependencies # must match workspace name in Pipeline
     persistentVolumeClaim:
       claimName: python-dependencies-storage # this PVC must already exist
-  - name: dockerfile-cm
-    configMap:
-      name: dockerfile
-      items:
-      - key: Dockerfile
-        path: Dockerfile

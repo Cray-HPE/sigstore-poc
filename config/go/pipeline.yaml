@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1beta1
 kind: Pipeline
 metadata:
-  name: python-build-pipeline
+  name: go-build-pipeline
 spec:
   params:
     - name: git-url
@@ -9,20 +9,32 @@ spec:
     - name: pathToContext
       description: The path to the build context, used by Kaniko - within the workspace
       default: src
-    - name: imageUrl
-      description: Image name to create including repository
-    - name: imageTag
-      description: Image tag
+    - name: MAIN_DIR
+      description: Directory containing the main executable (one with main func) to build.
+    - name: KO_DOCKER_REPO
+      description: Registry to push the image to
+    - name: KOFILE
+      description: Path to the .ko.yaml file to use when building with ko.
+      default: ./.ko.yaml
+    - name: COSIGN_REPOSITORY
+      type: string
+      default: ""
+    - name: SIGSTORE_CT_LOG_PUBLIC_KEY_FILE
+      type: string
+      default: ""
     - name: fulcio-endpoint
       description: Fulcio endpoint
       default: "http://fulcio.fulcio-system.svc"
     - name: rekor-endpoint
       description: Rekor endpoint
       default: "http://rekor.rekor-system.svc"
+  results:
+    - name: IMAGE-DIGEST
+      description: Digest of the image that was created
+      value: $(tasks.source-to-image.results.DIGESTS)
   workspaces:
     - name: git-source
     - name: dependencies
-    - name: dockerfile-cm
   tasks:
     - name: fetch-from-git
       taskRef:
@@ -39,25 +51,15 @@ spec:
       runAfter:
       - fetch-from-git
       taskRef:
-        name: install-python-dependencies
+        name: install-go-dependencies
       workspaces:
         - name: source
           workspace: git-source
         - name: dependencies
           workspace: dependencies
-    - name: install-dockerfile
-      taskRef:
-        name: install-dockerfile
-      runAfter:
-      - install-dependencies
-      workspaces:
-      - name: dependencies
-        workspace: dependencies
-      - name: dockerfile-cm
-        workspace: dockerfile-cm
     - name: list-dependencies
       runAfter:
-      - install-dockerfile
+      - install-dependencies
       taskRef:
         name: list-dependencies
       workspaces:
@@ -65,23 +67,29 @@ spec:
           workspace: dependencies
     - name: source-to-image
       taskRef:
-        name: kaniko
+        name: ko-build-image
       runAfter:
         - list-dependencies
       workspaces:
         - name: source
           workspace: dependencies
       params:
-        - name: IMAGE
-          value: $(params.imageUrl):$(params.imageTag)
-    - name: generate-sbom
+        - name: KO_DOCKER_REPO
+          value: $(params.KO_DOCKER_REPO)
+        - name: MAIN_DIR
+          value: $(params.MAIN_DIR)
+    - name: sign-image
       taskRef:
-        name: sbom-syft
+        name: sign-image
       runAfter:
-        - source-to-image
+      - source-to-image
       params:
-        - name: dev.chainguard.refresher.digest
-          value: $(params.imageUrl)@$(tasks.source-to-image.results.IMAGE-DIGEST)
+        - name: IMAGE
+          value: $(tasks.source-to-image.results.DIGESTS)
+        - name: COSIGN_REPOSITORY
+          value: $(params.COSIGN_REPOSITORY)
+        - name: SIGSTORE_CT_LOG_PUBLIC_KEY_FILE
+          value: $(params.SIGSTORE_CT_LOG_PUBLIC_KEY_FILE)
         - name: dev.chainguard.refresher.rekor-endpoint
           value: $(params.rekor-endpoint)
         - name: dev.chainguard.refresher.fulcio-endpoint
@@ -93,7 +101,7 @@ spec:
         - source-to-image
       params:
         - name: dev.chainguard.refresher.digest
-          value: $(params.imageUrl)@$(tasks.source-to-image.results.IMAGE-DIGEST)
+          value: $(tasks.source-to-image.results.DIGESTS)
         - name: dev.chainguard.refresher.rekor-endpoint
           value: $(params.rekor-endpoint)
         - name: dev.chainguard.refresher.fulcio-endpoint

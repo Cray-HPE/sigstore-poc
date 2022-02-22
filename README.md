@@ -1,32 +1,34 @@
-# Sigstore HPE POC 
+# Sigstore HPE POC
 
 Playground for building an example e2e pipeline using Tekton Pipelines, Chains, Dashboard, Sigstore Rekor, Cosign and Fulcio
 for Python and Kind and/or GCP/GKE.
-
-**NOTE** sbom/trivy tasks do not work on arm without fetching a
-[tekton pipelines update](https://github.com/tektoncd/pipeline/issues/4548)
 
 **NOTE** We have to use --allow-insecure-registry due to this
 [cosign bug](https://github.com/sigstore/cosign/issues/1405)
 
 # Get started
 
-1. Setup Kubernetes Cluster 
+1. Setup Kubernetes Cluster
 2. Install Tekton Pipelines, Chains, and Dashboards
-3. Install Rekor and Fulcio 
+3. Install Rekor and Fulcio
 4. Run Python builds through Pipelines
    1. Build, Dependencies
    2. Container creation
    3. SBOM creation
-   4. Trivy CVE Scanning 
+   4. Trivy CVE Scanning
 5. Verify results with Cosign
- 
+
 ## Kubernetes Cluster
 
-### Local Development 
+### Local Development
 
 
 **Note** you may hit file limits on the mac `sudo launchctl limit maxfiles 65536 200000` to remediate that issue
+
+**NOTE** For Macs the airplay receiver uses the 5000 port and may need to be
+disabled, details [here](https://developer.apple.com/forums/thread/682332).
+Alternatively, you can manually modify the script and change the
+[REGISTRY_PORT](https://github.com/vaikas/sigstore-scaffolding/blob/main/hack/setup-mac-kind.sh#L19)
 
 ```shell
 ./hack/kind/setup-kind.sh
@@ -39,12 +41,21 @@ This will set up a kind cluster on your machine with:
  * Tekton Chains / Pipelines
  * Tekton task for fetching GitHub sources
 
-### GCP Development 
+**Note** You may see some errors of the form:
+```
+Error from server (InternalError): error when creating "https://storage.googleapis.com/tekton-releases/chains/latest/release.yaml": Internal error occurred: failed calling webhook "config.webhook.pipeline.tekton.dev": Post "https://tekton-pipelines-webhook.tekton-pipelines.svc:443/config-validation?timeout=10s": dial tcp 10.96.244.5:443: connect: connection refused
+```
+
+They are due to some race conditions when installing Tekton components. There
+are retries there so as long things finish, it's ok. Cleaning those up will
+require some upstream work.
+
+### GCP Development
 
 Create the GKE Cluster, install Tekton Pipelines, Dashboard and Chains
 
-We are doing a terraform targeted plan/apply because the GKE cluster has to be up and running before helm can apply, 
-since we are directly pointing the helm provider to the GKE cluster. 
+We are doing a terraform targeted plan/apply because the GKE cluster has to be up and running before helm can apply,
+since we are directly pointing the helm provider to the GKE cluster.
 
 Set the GOOGLE_APPLICATION_CREDENTIALS path to where `gcloud auth application-default login` places your credentials file
 
@@ -66,9 +77,9 @@ gcloud container clusters  get-credentials chainguard-dev-gke3
 
 kubectl config get-contexts
 CURRENT   NAME                                                CLUSTER                                             AUTHINFO                                            NAMESPACE
-          gke_chainguard-dev_us-east1-b_chainguard-dev        gke_chainguard-dev_us-east1-b_chainguard-dev        gke_chainguard-dev_us-east1-b_chainguard-dev        
-*         gke_chainguard-dev_us-east1-b_chainguard-dev-gke3   gke_chainguard-dev_us-east1-b_chainguard-dev-gke3   gke_chainguard-dev_us-east1-b_chainguard-dev-gke3   
-          kind-kind                                           kind-kind                                           kind-kind                                           
+          gke_chainguard-dev_us-east1-b_chainguard-dev        gke_chainguard-dev_us-east1-b_chainguard-dev        gke_chainguard-dev_us-east1-b_chainguard-dev
+*         gke_chainguard-dev_us-east1-b_chainguard-dev-gke3   gke_chainguard-dev_us-east1-b_chainguard-dev-gke3   gke_chainguard-dev_us-east1-b_chainguard-dev-gke3
+          kind-kind                                           kind-kind                                           kind-kind
 
 kubectl config use-context gke_chainguard-dev_us-east1-b_chainguard-dev-gke3
 Switched to context "gke_chainguard-dev_us-east1-b_chainguard-dev-gke3".
@@ -76,47 +87,58 @@ Switched to context "gke_chainguard-dev_us-east1-b_chainguard-dev-gke3".
 
 Run
 
-    ./hack/setup-gcp.sh 
+    ./hack/gke/setup-gcp.sh
 
 This will install knative services onto the cluster
 
-Then 
+Then
 
 Installs fulcio and rekor, with a mysql backend running the cluster via ./hack/gke/release-arm-gke.yaml
 
-And finally test the installation with ./hack/gke/testrelease-gke.yaml which Runs two jobs, one for checking the 
+And finally test the installation with ./hack/gke/testrelease-gke.yaml which Runs two jobs, one for checking the
 ctlog tree and one for verifying OIDC signing.
 
 
-### Verify Sigstore installs 
+### Verify Sigstore installs
+
+There are two jobs that run to verify the installation. One (check-oidc) signs
+an image with cosign, and checktree ensures it's properly added to Rekor
+transparency log. Both of them should show `1/1` completions.
 
 ```bash
- kubectl get pods
-NAME               READY   STATUS      RESTARTS   AGE
-check-oidc-sl42c   0/1     Completed   0          19m
-checktree-828rg    0/1     Completed   0          19m
-checktree-8kmxd    0/1     Error       0          19m
-checktree-tvbkl    0/1     Error       0          19m
+kubectl get jobs
+NAME         COMPLETIONS   DURATION   AGE
+check-oidc   1/1           40s        9m19s
+checktree    1/1           59s        9m19s
 ```
 
 ```bash
-kubectl logs checktree-828rg
-2022/02/04 14:37:09 Got Payload: map[9ea3cde144cf9277764e1c96b70d8fc03c2370ba25a3010a65d5dcf5535cae83:{Attestation:<nil> Body:BASE64DATA IntegratedTime:0xc000129688 LogID:0xc00010d1f0 LogIndex:0xc000129720 Verification:0xc0001344a0}]
+for i in `kubectl get pods | grep Completed | awk -F " " '{print $1}'`
+do
+kubectl logs $i
+done
+```
+As an example (little snipped for readability), I saw this:
 
-
-kubectl logs check-oidc-sl42c
-
+```
 Generating ephemeral keys...
 Retrieving signed certificate...
 **Warning** Using a non-standard public key for verifying SCT: /var/run/sigstore-root/rootfile.pem
 Successfully verified SCT...
 tlog entry created with index: 0
-Pushing signature to: chainguard-dev/nginx 
+Pushing signature to: knative
+2022/02/10 22:57:56 Got Payload: map[e0beca4...vdExTMHRMVVZPUkNCRFJWSlVTVVpKUTBGVVJTMHRMUzB0Q2c9PSJ9fX19 IntegratedTime:0x4000135588 LogID:0x400001e8e0 LogIndex:0x40001355a0 Verification:0x400002a860}]
+2022/02/10 22:57:56 Found UUID: e0beca412f78687deef90f1e7aacbe022d0968ec9c12dd36fb7374f0102e08a8
+2022/02/10 22:57:56 Checking for type: hashedrekord version 0.0.1
+2022/02/10 22:57:56 Got TYPE: &{HashedRekordObj:{Data:0x400012e980 Signature:0x4000591f00} keyObj:0x4000126d20 sigObj:0x4000126c90}
+2022/02/10 22:57:56 Searching for sha256:cad43a8a48728336a6606d7bfecc7aa84b032b1dd951b5ec287cfd4597b22603
+2022/02/10 22:57:56 Found index entry: e0beca412f78687deef90f1e7aacbe022d0968ec9c12dd36fb7374f0102e08a8
 ```
 
-If there are any issues with the installation you can use ./hack/gke/test-gke-user.yaml 
 
-Testing rekor 
+If there are any issues with the installation you can use ./hack/gke/test-gke-user.yaml
+
+Testing rekor
 
 ```bash
  curl http://rekor.rekor-system.svc/api/v1/log/
@@ -127,7 +149,7 @@ Testing rekor
 }
 ```
 
-Verifying OIDC token 
+Verifying OIDC token
 
 ```bash
 cat /var/run/sigstore/cosign/oidc-token
@@ -135,11 +157,6 @@ SA_TOKEN_INFOMATION
 ```
 
 # Tekton Overview
-
-**NOTE** For Macs the airplay receiver uses the 5000 port and may need to be
-disabled, details [here](https://developer.apple.com/forums/thread/682332).
-Alternatively, you can manually modify the script and change the
-[REGISTRY_PORT](https://github.com/vaikas/sigstore-scaffolding/blob/main/hack/setup-mac-kind.sh#L19)
 
 **NOTE** You may have to uninstall the docker registry container between running
 the above scripts because it spins up a registry container in a daemon mode.
@@ -203,32 +220,41 @@ pipeline pieces. This is very rough beginning of a proper Python pipeline and is
 meant to demonstrate breaking the large build into multiple steps and providing
 attestations at each level via Tekton Chains.
 
-#### Install Dockerfile that Kaniko will use to build the app image
-```bash
-kubectl create configmap dockerfile --from-file=./docker/python/Dockerfile
-```
-
 #### Install all the tasks that our needed for the pipeline
 ```shell
 kubectl apply -f ./config/common/
-task.tekton.dev/git-clone configured
-task.tekton.dev/install-dockerfile created
-task.tekton.dev/kaniko created
-task.tekton.dev/list-dependencies created
-task.tekton.dev/install-python-dependencies created
-pipeline.tekton.dev/python-build-pipeline created
-task.tekton.dev/sbom-syft created
-task.tekton.dev/scan-trivy created
+kubectl apply -f ./config/python/
+kubectl apply -f ./config/go/
 ```
 
-Then run the pipeline with 
+After this, you should have the following tasks and pipelines
+installed:
 
-GKE 
+```shell
+kubectl get tasks,pipelines
+NAME                                          AGE
+task.tekton.dev/git-clone                     91m
+task.tekton.dev/install-go-dependencies       91m
+task.tekton.dev/install-python-dependencies   91m
+task.tekton.dev/kaniko                        91m
+task.tekton.dev/ko-build-image                91m
+task.tekton.dev/list-dependencies             91m
+task.tekton.dev/sbom-syft                     91m
+task.tekton.dev/scan-trivy                    91m
+
+NAME                                        AGE
+pipeline.tekton.dev/go-build-pipeline       91m
+pipeline.tekton.dev/python-build-pipeline   91m
+```
+
+Then run the Python pipeline with
+
+GKE
 ```shell
 kubectl apply -f ./config/gke/python-pipelinerun-gke.yaml
 ```
 
-OR 
+OR
 
 Local
 ```shell
@@ -240,7 +266,7 @@ And then the pipeline should complete successfully, you can follow along:
 ```shell
 kubectl get pipelineruns
 NAME                      SUCCEEDED   REASON    STARTTIME   COMPLETIONTIME
-build-pipeline-run        Unknown     Running   29s    
+build-pipeline-run        Unknown     Running   29s
 ```
 
 You can view the logs of the pipeline run with [tkn cli](https://tekton.dev/docs/cli/)
@@ -248,7 +274,7 @@ You can view the logs of the pipeline run with [tkn cli](https://tekton.dev/docs
 tkn pipelineruns logs build-pipeline-run -f
 ```
 
-If you have tekton dashboard installed 
+If you have tekton dashboard installed
 
 ```bash
 kubectl port-forward svc/tekton-dashboard 9097:9097 -n tekton-pipelines
@@ -259,8 +285,8 @@ kubectl port-forward svc/tekton-dashboard 9097:9097 -n tekton-pipelines
 When the pipeline finishes you see this in the logs
 
 ```shell
-[source-to-image : build-and-push] INFO[0008] Pushing image to registry.local:5000/knative/pythontest:0.1 
-[source-to-image : build-and-push] INFO[0010] Pushed image to 1 destinations               
+[source-to-image : build-and-push] INFO[0008] Pushing image to registry.local:5000/knative/pythontest:0.1
+[source-to-image : build-and-push] INFO[0010] Pushed image to 1 destinations
 
 
 [source-to-image : digest-to-results] sha256:824e9a8a00d5915bc87e25316dfbb19dbcae292970b02a464e2da1a665c7d54b
@@ -295,7 +321,7 @@ export SIGSTORE_ROOT_FILE=./fulcio-root.pem
 
 Grab the image that was produced
 
-Get the latest source-to-image task run that has completed successfully 
+Get the latest source-to-image task run that has completed successfully
 ```bash
 kubectl get  taskruns  -l  "tekton.dev/pipeline"="python-build-pipeline" -l "tekton.dev/pipelineTask"="source-to-image"
 NAME                                         SUCCEEDED   REASON      STARTTIME   COMPLETIONTIME
@@ -319,7 +345,7 @@ The Source to image task will produce the image id of the container it built and
 IMAGE_ID=$(kubectl get taskruns ${TASK_NAME} -o jsonpath='{.spec.params[0].value}' | sed 's/:0.1//')@$(kubectl get taskruns ${TASK_NAME} -o jsonpath='{.status.taskResults[0].value}')
 ```
 
-Example image id 
+Example image id
 
 ```bash
 echo $IMAGE_ID
@@ -334,10 +360,29 @@ Pull down the Root CA from fulcio , Make sure you have set up [Network Access](#
 curl http://fulcio.fulcio-system.svc:8080/api/v1/rootCert > ./fulcio-root.pem
 ```
 
-Now download the SBOM 
+Ensure the image was Signed:
 
 ```shell
-SIGSTORE_ROOT_FILE=./fulcio-root.pem COSIGN_EXPERIMENTAL=1 cosign download sbom --allow-insecure-registry  $IMAGE_ID > /tmp/sbom
+SIGSTORE_ROOT_FILE=./fulcio-root.pem COSIGN_EXPERIMENTAL=1 cosign verify --allow-insecure-registry --rekor-url=http://rekor.rekor-system.svc:8080 --allow-insecure-registry $IMAGE_ID
+```
+
+And you should see something like this:
+```
+Verification for registry.local:5000/knative/pythontest@sha256:63ac5cfea7d421d92635f97e9e014b5ceed0613566d52111f990b6076e564905 --
+The following checks were performed on each of these signatures:
+  - The cosign claims were validated
+  - The claims were present in the transparency log
+  - The signatures were integrated into the transparency log when the certificate was valid
+  - Any certificates were verified against the Fulcio roots.
+
+  [{"critical":{"identity":{"docker-reference":"registry.local:5000/knative/pythontest"},"image":{"docker-manifest-digest":"sha256:63a<SNIPPED HERE FOR READABILITY>
+```
+
+
+Now download the SBOM
+
+```shell
+COSIGN_EXPERIMENTAL=1 cosign download sbom --allow-insecure-registry  $IMAGE_ID > /tmp/sbom
 ```
 
 Get the trivy scan result:
@@ -357,14 +402,14 @@ The following checks were performed on each of these signatures:
   - Any certificates were verified against the Fulcio roots.
 ```
 
-## Clean up 
+## Clean up
 
-GKE 
+GKE
 ```shell
 make tf_destroy
 ```
 
-Local 
+Local
 
 ```shell
 kind delete cluster --name sigstore`

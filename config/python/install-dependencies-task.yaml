@@ -3,6 +3,15 @@ kind: Task
 metadata:
   name: install-python-dependencies
 spec:
+  description: >-
+    This task installs the required Python dependencies by creating
+    a Python venv and then running pip install against the specified
+    requirements.txt file. The new venv is then available in
+    dependencies Workspace.
+  params:
+    - name: REQUIREMENTSFILE
+      description: Requirements file used for installing the dependencies using pip.
+      type: string
   workspaces:
     - name: source
       description: Where the git clones the repo to.
@@ -13,8 +22,12 @@ spec:
       image: python:3.10-slim@sha256:ca2a31f21938f24bab02344bf846a90cc2bff5bd0e5a53b24b5dfcb4519ea8a3
       script: |
         cd $(workspaces.source.path)
+        # Create Python virtual environment
         VIRTUAL_ENV=$(workspaces.dependencies.path)/venv
         python3 -m venv $VIRTUAL_ENV
         PATH="$VIRTUAL_ENV/bin:$PATH"
-        pip install -r ./build/requirements.txt
+        # Install requirements
+        pip install -r $(params.REQUIREMENTSFILE)
+        # Add application code next to it.
+        cp -R $(workspaces.source.path) $(workspaces.dependencies.path)
         ls -R $(workspaces.dependencies.path)
