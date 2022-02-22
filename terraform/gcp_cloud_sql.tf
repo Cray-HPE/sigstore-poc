@@ -65,7 +65,7 @@ resource "google_sql_user" "users_trillian" {
 }
 
 variable "TRILLIAN_USERNAME" {
-  default = "mysql"
+  default     = "mysql"
   type        = string
   description = "trillian client mysql username"
 }

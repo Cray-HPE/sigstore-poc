@@ -1,0 +1,7 @@
+# Copyright 2021 Chainguard, Inc.
+# SPDX-License-Identifier: Apache-2.0
+
+defaultBaseImage: gcr.io/distroless/static:nonroot
+baseImageOverrides:
+  # TODO(jdolitsky): this image does not work for arm64
+  chainguard.dev/sqlproxy/cmd: gcr.io/cloudsql-docker/gce-proxy:1.28.1
