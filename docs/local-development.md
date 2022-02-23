@@ -10,15 +10,7 @@ You may hit file limits; you can run `sudo launchctl limit maxfiles 65536 200000
 
 The airplay receiver uses port 5000, which may need to be disabled. Further details via [Apple's developer forum](https://developer.apple.com/forums/thread/682332). Alternatively, you can manually modify the script and change the [REGISTRY_PORT](https://github.com/vaikas/sigstore-scaffolding/blob/main/hack/setup-mac-kind.sh#L19)
 
-# Prerequisites
 
-In order to run through this example, you will need the following installed:
-
- * Docker
- * [tkn cli](https://tekton.dev/docs/cli/)
- * kubectl
- * rekor-cli
- * cosign
 
 # Setup Kubernetes cluster
 

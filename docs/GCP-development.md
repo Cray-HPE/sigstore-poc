@@ -24,15 +24,59 @@ for Python and Kind and/or GCP/GKE.
 
 ### GCP Development
 
-Create the GKE Cluster, install Tekton Pipelines, Dashboard and Chains
+Terraform will create the Trillian MySQL database, the Google CA, GKE Cluster and 
+install Tekton Pipelines, Dashboard and Chains via Helm and Sigstore via helm
 
 We are doing a terraform targeted plan/apply because the GKE cluster has to be up and running before helm can apply,
 since we are directly pointing the helm provider to the GKE cluster.
 
+You will need to have gcloud [installed](https://cloud.google.com/sdk/docs/install)
+
 Set the GOOGLE_APPLICATION_CREDENTIALS path to where `gcloud auth application-default login` places your credentials file
+
+Usually that is `$HOME/.config/gcloud/application_default_credentials.json` 
+
+We need to make sure we have the helm charts locally as they are not stored in Artifactory hub.
+
+```bash
+git clone git@github.com:Cray-HPE/sigstore-charts.git $PWD/sigstore-charts
+git checkout gke-hpe
+```
+
+```bash
+git clone git@github.com:Cray-HPE/tekton-helm-charts.git $PWD/tekton-helm-chart
+git checkout templates
+```
+
+Created an .env file with the following vars
+
+```bash
+TK_PIPELINE_HELM_LOCAL_PATH=$PWD/tekton-helm-chart/charts/tekton-pipelines
+TK_CHAINS_HELM_LOCAL_PATH=$PWD/tekton-helm-chart/charts/tekton-chains
+TK_DASHBOARD_HELM_LOCAL_PATH=$PWD/tekton-helm-chart/charts/tekton-dashboard
+GOOGLE_APPLICATION_CREDENTIALS=$HOME/.config/gcloud/application_default_credentials.json
+SIGSTORE_HELM_LOCAL_PATH=/Users/strongjz/Documents/code/go/src/github.com/sabre1041/sigstore-charts
+TRILLIAN_PASSWORD=trillian
+```
+
+Now we can deploy everything with Terraform
 
 ```bash
 make tf_init tf_target_plan tf_target_apply tf_plan tf_apply
+
+Apply complete! Resources: 29 added, 29 changed, 0 destroyed.
+
+Outputs:
+
+ca_certificate = tolist([
+  <<-EOT
+  -----BEGIN CERTIFICATE-----
+  -----END CERTIFICATE-----
+  
+  EOT,
+])
+database_connection_string = "chainguard-dev:us-east1:terraform-20220223171632604900000001"
+gcp_private_ca_parent = "projects/chainguard-dev/locations/us-east1/caPools/sigstore-poc-default"
 ```
 
 Let's make sure we are running on the GKE cluster we just created, switch kubectl context
@@ -42,158 +86,116 @@ gcloud auth application-default login # if need be
 gcloud container clusters list
 NAME                 LOCATION    MASTER_VERSION   MASTER_IP       MACHINE_TYPE   NODE_VERSION     NUM_NODES  STATUS
 chainguard-dev       us-east1-b  1.21.6-gke.1500  35.229.115.236  n1-standard-4  1.21.6-gke.1500  2          RUNNING
-chainguard-dev-gke3  us-east1-b  1.21.6-gke.1500  35.185.98.163   n1-standard-4  1.21.6-gke.1500  2          RECONCILING
 
 
-gcloud container clusters  get-credentials chainguard-dev-gke3
+gcloud container clusters  get-credentials chainguard-dev
 
 kubectl config get-contexts
-CURRENT   NAME                                                CLUSTER                                             AUTHINFO                                            NAMESPACE
-          gke_chainguard-dev_us-east1-b_chainguard-dev        gke_chainguard-dev_us-east1-b_chainguard-dev        gke_chainguard-dev_us-east1-b_chainguard-dev
-*         gke_chainguard-dev_us-east1-b_chainguard-dev-gke3   gke_chainguard-dev_us-east1-b_chainguard-dev-gke3   gke_chainguard-dev_us-east1-b_chainguard-dev-gke3
+CURRENT   NAME                                                CLUSTER                                             AUTHINFO                                    
+*         gke_chainguard-dev_us-east1-b_chainguard-dev        gke_chainguard-dev_us-east1-b_chainguard-dev        gke_chainguard-dev_us-east1-b_chainguard-dev
           kind-kind                                           kind-kind                                           kind-kind
 
-kubectl config use-context gke_chainguard-dev_us-east1-b_chainguard-dev-gke3
-Switched to context "gke_chainguard-dev_us-east1-b_chainguard-dev-gke3".
+kubectl config use-context gke_chainguard-dev_us-east1-b_chainguard-dev
+Switched to context "gke_chainguard-dev_us-east1-b_chainguard-dev".
 ```
-
-Run
-
-    ./hack/gke/setup-gcp.sh
-
-This will install knative services onto the cluster
-
-Then
-
-Installs fulcio and rekor, with a mysql backend running the cluster via ./hack/gke/release-arm-gke.yaml
-
-And finally test the installation with ./hack/gke/testrelease-gke.yaml which Runs two jobs, one for checking the
-ctlog tree and one for verifying OIDC signing.
-
 
 ### Verify Sigstore installs
 
-There are two jobs that run to verify the installation. One (check-oidc) signs
-an image with cosign, and checktree ensures it's properly added to Rekor
-transparency log. Both of them should show `1/1` completions.
+Verifying Fulcio server deployment
 
 ```bash
-kubectl get jobs
+kubectl logs deployment/fulcio -n fulcio-system
+2022-02-23T18:29:20.345Z        INFO    app/serve.go:172        0.0.0.0:5555
 ```
 
-```
-NAME         COMPLETIONS   DURATION   AGE
-check-oidc   1/1           40s        9m19s
-checktree    1/1           59s        9m19s
-```
+Verifying Rekor server deployment 
 
-```bash
-for i in `kubectl get pods | grep Completed | awk -F " " '{print $1}'`
-do
-kubectl logs $i
-done
-```
-As an example (little snipped for readability), I saw this:
-
-```
-Generating ephemeral keys...
-Retrieving signed certificate...
-**Warning** Using a non-standard public key for verifying SCT: /var/run/sigstore-root/rootfile.pem
-Successfully verified SCT...
-tlog entry created with index: 0
-Pushing signature to: knative
-2022/02/10 22:57:56 Got Payload: map[e0beca4...vdExTMHRMVVZPUkNCRFJWSlVTVVpKUTBGVVJTMHRMUzB0Q2c9PSJ9fX19 IntegratedTime:0x4000135588 LogID:0x400001e8e0 LogIndex:0x40001355a0 Verification:0x400002a860}]
-2022/02/10 22:57:56 Found UUID: e0beca412f78687deef90f1e7aacbe022d0968ec9c12dd36fb7374f0102e08a8
-2022/02/10 22:57:56 Checking for type: hashedrekord version 0.0.1
-2022/02/10 22:57:56 Got TYPE: &{HashedRekordObj:{Data:0x400012e980 Signature:0x4000591f00} keyObj:0x4000126d20 sigObj:0x4000126c90}
-2022/02/10 22:57:56 Searching for sha256:cad43a8a48728336a6606d7bfecc7aa84b032b1dd951b5ec287cfd4597b22603
-2022/02/10 22:57:56 Found index entry: e0beca412f78687deef90f1e7aacbe022d0968ec9c12dd36fb7374f0102e08a8
-```
-
-
-If there are any issues with the installation you can use ./hack/gke/test-gke-user.yaml
-
-Testing rekor
-
-```bash
- curl http://rekor.rekor-system.svc/api/v1/log/
-```
-
-```
-{
-  "rootHash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-  "signedTreeHead":"Rekor\n0\n47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=\nTimestamp: 1644340477773818665\n\n— rekor.sigstore.dev LJZ0/DBFAiBkWCXKJWbDUzwozFh0HO8flMJu40Bdd5wpf/p2yF0brgIhAMx+Csi20A25zziQuacUaCKWBXpkG52Br0eKgcNrKzjI\n",
-  "treeSize":0
+```shell
+k logs deployment/rekor-server -n rekor-system
+2022-02-23T18:29:56.374Z        INFO    app/serve.go:70 starting rekor-server @ {
+  "GitVersion": "v0.5.0",
+  "GitCommit": "09ecf71dff57de24ec5e779b4077b187956edf0e",
+  "GitTreeState": "clean",
+  "BuildDate": "'2022-02-04T12:25:24Z'",
+  "GoVersion": "go1.17.6",
+  "Compiler": "gc",
+  "Platform": "linux/amd64"
 }
+2022-02-23T18:29:56.397Z        INFO    app/serve.go:97 Loading support for pluggable type 'helm'
+2022-02-23T18:29:56.397Z        INFO    app/serve.go:98 Loading version '0.0.1' for pluggable type 'helm'
+2022-02-23T18:29:56.397Z        INFO    app/serve.go:97 Loading support for pluggable type 'hashedrekord'
+2022-02-23T18:29:56.397Z        INFO    app/serve.go:98 Loading version '0.0.1' for pluggable type 'hashedrekord'
+2022-02-23T18:29:56.397Z        INFO    app/serve.go:97 Loading support for pluggable type 'rpm'
+2022-02-23T18:29:56.397Z        INFO    app/serve.go:98 Loading version '0.0.1' for pluggable type 'rpm'
+2022-02-23T18:29:56.397Z        INFO    app/serve.go:97 Loading support for pluggable type 'jar'
+2022-02-23T18:29:56.397Z        INFO    app/serve.go:98 Loading version '0.0.1' for pluggable type 'jar'
+2022-02-23T18:29:56.397Z        INFO    app/serve.go:97 Loading support for pluggable type 'alpine'
+2022-02-23T18:29:56.397Z        INFO    app/serve.go:98 Loading version '0.0.1' for pluggable type 'alpine'
+2022-02-23T18:29:56.397Z        INFO    app/serve.go:97 Loading support for pluggable type 'tuf'
+2022-02-23T18:29:56.397Z        INFO    app/serve.go:98 Loading version '0.0.1' for pluggable type 'tuf'
+2022-02-23T18:29:56.397Z        INFO    app/serve.go:97 Loading support for pluggable type 'rekord'
+2022-02-23T18:29:56.397Z        INFO    app/serve.go:98 Loading version '0.0.1' for pluggable type 'rekord'
+2022-02-23T18:29:56.397Z        INFO    app/serve.go:97 Loading support for pluggable type 'intoto'
+2022-02-23T18:29:56.397Z        INFO    app/serve.go:98 Loading version '0.0.1' for pluggable type 'intoto'
+2022-02-23T18:29:56.397Z        INFO    app/serve.go:97 Loading support for pluggable type 'rfc3161'
+2022-02-23T18:29:56.397Z        INFO    app/serve.go:98 Loading version '0.0.1' for pluggable type 'rfc3161'
+2022-02-23T18:29:56.401Z        INFO    storage/storage.go:40   Configuring attestation storage at file:///var/run/attestations
+2022-02-23T18:29:56.420Z        INFO    restapi/server.go:234   Serving rekor server at http://[::]:3000
 ```
 
-Verifying OIDC token
+We didn't deploy the sigstore pieces with ingress so let's use kubectl port-forward to make requests to rekor and fulcio
 
 ```bash
-cat /var/run/sigstore/cosign/oidc-token
-SA_TOKEN_INFOMATION
+kubectl port-forward svc/fulcio 8081:80 -n fulcio-system &
+kubectl port-forward svc/rekor-server 8080:3000 -n rekor-system &
 ```
-
-# Tekton Overview
-
-**NOTE** You may have to uninstall the docker registry container between running
-the above scripts because it spins up a registry container in a daemon mode.
-To clean a previously running registry, you can do one of these:
-
-YOLO:
-
-```shell
-docker rm -f `docker ps -a | grep 'registry:2' | awk -F " " '{print $1}'`
-```
-
-Or to check things first:
-
-```shell
-docker ps -a | grep registry
-b1e3f3238f7a   registry:2                        "/entrypoint.sh /etc…"   15 minutes ago   Up 15 minutes               0.0.0.0:5000->5000/tcp, :::5000->5000/tcp   registry.local
-```
-
-So that's the running version of the registry, so remove it:
-```shell
-docker rm -f b1e3f3238f7a
-```
-
-### <a name="network"></a> Network access
-
-Setup port forwarding:
-
-```shell
-kubectl -n kourier-system port-forward service/kourier-internal 8080:80 &
-```
-
-### Adding localhost entries to make tools usable
 
 Add the following entries to your `/etc/hosts` file
-
 ```
 127.0.0.1 rekor.rekor-system.svc
 127.0.0.1 fulcio.fulcio-system.svc
 127.0.0.1 ctlog.ctlog-system.svc
 ```
 
-This makes using tooling easier, for example:
+Testing Fulcio
 
-```shell
-rekor-cli --rekor_server http://rekor.rekor-system.svc:8080 loginfo
+```bash
+curl -s http://fulcio.fulcio-system.svc:8081/api/v1/rootCert |  openssl x509 -noout -subject
+subject= /O=Example, Org./CN=Example Authority
 ```
 
-For example, this is what I get after smoke tests have successfully completed:
+This will match the Subject from Terraform Google CA deployment 
 
-```shell
-rekor-cli --rekor_server http://rekor.rekor-system.svc:8080 loginfo
+Testing Rekor
+
+```bash
+ curl http://rekor.rekor-system.svc/api/v1/log/
+```
 
 ```
-No previous log state stored, unable to prove consistency
-Verification Successful!
-Tree Size: 1
-Root Hash: 062e2fa50e2b523f9cfd4eadc4b67745436226d64bf9799d57c5dc023681c4b8
-Timestamp: 2022-02-04T22:09:46Z
+rootHash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+signedTreeHead: |
+  Rekor
+  0
+  47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=
+  Timestamp: 1645640664017031120
+
+  — rekor.sigstore.dev H2kZmzBFAiEA3PYwgkv2MMtRpbENLWgjVfddgdnbyxBo9hArYv43erMCIErMVAYmxsT9IgeT3U841wb9DWRYKWHoKMTvIJufE03/
+treeSize: 0
 ```
+
+If there are any issues with the OIDC you can verify the [OIDC setup](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity)
+
+```bash
+kubectl apply -f ./hack/gke/test-gke-user.yaml
+kubectl exec -it workload-identity-test -- curl -H "Metadata-Flavor: Google" http://169.254.169.254/computeMetadata/v1/instance/service-accounts/
+
+default-user-workload@chainguard-dev.iam.gserviceaccount.com/
+default/
+```
+
+
+# Tekton Overview
 
 # Tekton tasks
 
@@ -234,7 +236,7 @@ Then run the Python pipeline with
 
 GKE
 ```shell
-kubectl apply -f ./config/gke/python-pipelinerun-gke.yaml
+kubectl apply -f ./config/gke/
 ```
 
 And then the pipeline should complete successfully, you can follow along:
@@ -257,10 +259,10 @@ tkn pipelineruns logs build-pipeline-run -f
 If you have tekton dashboard installed
 
 ```bash
-kubectl port-forward svc/tekton-dashboard 9097:9097 -n tekton-pipelines
+kubectl port-forward svc/tekton-dashboard 9097:9097 -n tekton-pipelines &
 ```
 
-![Tekton dashboard](images/tekton-dashboards.png)
+![Tekton dashboard](../images/tekton-dashboards.png)
 
 When the pipeline finishes you see this in the logs
 
@@ -272,7 +274,7 @@ When the pipeline finishes you see this in the logs
 [source-to-image : digest-to-results] sha256:824e9a8a00d5915bc87e25316dfbb19dbcae292970b02a464e2da1a665c7d54b
 ```
 
-![Tekton pipeline](images/tekton-pipeline.png)
+![Tekton pipeline](../images/tekton-pipeline.png)
 
 # Inspect results
 
@@ -297,7 +299,7 @@ export SIGSTORE_CT_LOG_PUBLIC_KEY_FILE=./ctlog-public.pem
 Fulcio root:
 
 ```shell
-kubectl -n fulcio-system get secrets fulcio-secret -ojsonpath='{.data.cert}' | base64 -d > ./fulcio-root.pem
+curl http://fulcio.fulcio-system.svc:8081/api/v1/rootCert > fulcio-root.pem
 export SIGSTORE_ROOT_FILE=./fulcio-root.pem
 ```
 
@@ -341,10 +343,10 @@ gcr.io/chainguard-dev/pythontest@sha256:c089acd03a21830c329d70f61cefa2a29c43e59e
 
 Get the SBOM:
 
-Pull down the Root CA from fulcio , Make sure you have set up [Network Access](#network)
+Pull down the Root CA from fulcio, Make sure you have set up [Network Access](#network)
 
 ```bash
-curl http://fulcio.fulcio-system.svc:8080/api/v1/rootCert > ./fulcio-root.pem
+curl http://fulcio.fulcio-system.svc:8081/api/v1/rootCert > ./fulcio-root.pem
 ```
 
 Ensure the image was Signed:

@@ -28,7 +28,7 @@ items:
           containers:
             - name: check-oidc
               image: gcr.io/projectsigstore/cosign:v1.5.1
-              args: [ "sign", "--k8s-keychain", "--force", "--fulcio-url", "http://fulcio.fulcio-system.svc", "--rekor-url", "http://rekor.rekor-system.svc", "gcr.io/chainguard-dev/nginx" ]
+              args: [ "sign", "--k8s-keychain", "--force", "--fulcio-url", "http://fulcio.fulcio-system.svc", "--rekor-url", "http://rekor-server.rekor-system.svc", "gcr.io/chainguard-dev/nginx" ]
               env:
                 - name: COSIGN_EXPERIMENTAL
                   value: "true"

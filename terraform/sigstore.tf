@@ -12,7 +12,7 @@ resource "helm_release" "sigstore_scaffold" {
   force_update      = true
   recreate_pods     = true
   wait_for_jobs     = true
-  wait              = true
+  wait              = false
   replace           = true
   cleanup_on_fail   = true
   //dependency_update = true

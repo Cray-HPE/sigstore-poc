@@ -14,6 +14,17 @@ Playground for building an example e2e pipeline using Tekton Pipelines, Chains, 
    4. Trivy CVE Scanning
 5. Verify results with Cosign
 
+# Prerequisites
+
+In order to run through this example, you will need the following installed:
+
+* [Docker](https://docs.docker.com/get-docker/)
+* [tkn cli](https://tekton.dev/docs/cli/)
+* [kubectl](https://kubernetes.io/docs/tasks/tools/)
+* [rekor-cli](https://github.com/sigstore/rekor/releases)
+* [cosign](https://github.com/sigstore/cosign/releases)
+* [openssl cli](https://www.openssl.org/source/)
+
 Read full guidance for local development via the [local tutorial](/docs/local-development.md).
 
 Read full guidance for GCP development via the [GCP tutorial](/docs/GCP-development.md).

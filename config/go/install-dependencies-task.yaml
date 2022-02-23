@@ -16,6 +16,6 @@ spec:
           value: $(workspaces.dependencies.path)/gomod
       script: |
         cd $(workspaces.source.path)
-        mkdir $GOMODCACHE
+        mkdir -p $GOMODCACHE
         go mod download
         cp -R $(workspaces.source.path) $(workspaces.dependencies.path)

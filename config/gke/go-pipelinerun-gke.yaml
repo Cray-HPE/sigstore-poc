@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: shared-task-storage
+  name: go-shared-task-storage
 spec:
   resources:
     requests:
-      storage: 16Mi
+      storage: 4Gi
   volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
@@ -13,11 +13,11 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: python-dependencies-storage
+  name: go-dependencies-storage
 spec:
   resources:
     requests:
-      storage: 16Mi
+      storage: 4Gi
   volumeMode: Filesystem
   accessModes:
     - ReadWriteOnce
@@ -26,38 +26,32 @@ spec:
 apiVersion: tekton.dev/v1beta1
 kind: PipelineRun
 metadata:
-  name: build-pipeline-run
+  name: go-build-pipeline-run
 spec:
   serviceAccountName: gke-user
   params:
     - name: git-url
-      value: "https://github.com/vaikas/hellopython.git"
+      value: "https://github.com/vaikas/spiffefulciotest.git"
     - name: git-revision
       value: "main"
-    - name: imageUrl
-      value: "gcr.io/chainguard-dev/pythontest"
-    - name: imageTag
-      value: "0.1"
-    - name: REQUIREMENTSFILE
-      value: ./requirements.txt
-    - name: DOCKERFILE
-      value: ./source/docker/Dockerfile
-    - name: fulcio-endpoint
-      value: "http://fulcio.fulcio-system.svc"
-    - name: rekor-endpoint
-      value: "http://rekor-server.rekor-system.svc:3000"
+    - name: MAIN_DIR
+      value: "./cmd"
     - name: SIGSTORE_CT_LOG_PUBLIC_KEY_FILE
       value: "/data/ctlog-public.pem"
     - name: KO_DOCKER_REPO
       value: gcr.io/chainguard-dev/
     - name: COSIGN_REPOSITORY
       value: gcr.io/chainguard-dev/
+    - name: fulcio-endpoint
+      value: "http://fulcio.fulcio-system.svc"
+    - name: rekor-endpoint
+      value: "http://rekor-server.rekor-system.svc:3000"
   pipelineRef:
-    name: python-build-pipeline
+    name: go-build-pipeline
   workspaces:
   - name: git-source # must match workspace name in Pipeline
     persistentVolumeClaim:
-      claimName: shared-task-storage # this PVC must already exist
+      claimName: go-shared-task-storage # this PVC must already exist
   - name: dependencies # must match workspace name in Pipeline
     persistentVolumeClaim:
-      claimName: python-dependencies-storage # this PVC must already exist
+      claimName: go-dependencies-storage # this PVC must already exist
