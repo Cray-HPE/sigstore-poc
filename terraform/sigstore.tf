@@ -5,11 +5,13 @@ variable "trillian_sa_names" {
 
 resource "helm_release" "sigstore_scaffold" {
   depends_on        = [google_sql_database.database_trillian, google_container_cluster.primary]
-  timeout           = "360"
-  name              = "sigstore-scaffold"
+  timeout           = "160"
+  name              = "sigstore-scaffolding"
   chart             = "${var.SIGSTORE_HELM_LOCAL_PATH}/charts/scaffold"
   version           = var.SIGSTORE_HELM_VERSION
   force_update      = true
+  recreate_pods     = true
+  replace           = true
   cleanup_on_fail   = true
   dependency_update = true
   set {
@@ -18,23 +20,23 @@ resource "helm_release" "sigstore_scaffold" {
   }
   set {
     name  = "trillian.mysql.gcp.cloudsql.repository"
-    value = "chainguard-dev/sqlproxy"
+    value = "chainguard-dev/sqlproxy/cmd"
   }
   set {
     name  = "trillian.mysql.gcp.cloudsql.version"
-    value = "sha256:a0c3892b23e4d5e0e8edd442bc5de46ab08b1a9668cd4d4bd641eff3d7d2f3ad"
+    value = "sha256:f09fe2bdd5af82b2ee009b5e5204e715c6d0ab87e0051477ddf7b688cd532c1c"
   }
   set {
-    name  = "trillain.createdb.image.registry"
+    name  = "trillian.createdb.image.registry"
     value = "gcr.io"
   }
   set {
-    name  = "trillain.createdb.image.repository"
+    name  = "trillian.createdb.image.repository"
     value = "chainguard-dev/createdb"
   }
   set {
-    name  = "trillain.createdb.image.version"
-    value = "sha256:718839372b7e35f5f96c5c228e72385374a92dcab57def1cad49cb235e186225"
+    name  = "trillian.createdb.image.version"
+    value = "sha256:92bdb6dfda8d712a002f2af41e4d60fb4919502996b1b00e83dcd431ba1b585e"
   }
   set {
     name  = "trillian.mysql.auth.rootPassword"
@@ -58,7 +60,7 @@ resource "helm_release" "sigstore_scaffold" {
   }
   set {
     name  = "trillian.mysql.hostname"
-    value = "localhost"
+    value = google_sql_database_instance.trillian.private_ip_address
   }
   set {
     name  = "trillian.logServer.serviceAccount.annotations.iam\\.gke\\.io\\/gcp-service-account"

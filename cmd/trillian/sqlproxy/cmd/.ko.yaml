@@ -4,4 +4,4 @@
 defaultBaseImage: gcr.io/distroless/static:nonroot
 baseImageOverrides:
   # TODO(jdolitsky): this image does not work for arm64
-  chainguard.dev/sqlproxy/cmd: gcr.io/cloudsql-docker/gce-proxy:1.28.1
+  chainguard.dev/sqlproxy/cmd: gcr.io/cloudsql-docker/gce-proxy:1.27.0

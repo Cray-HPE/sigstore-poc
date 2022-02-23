@@ -9,7 +9,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/kelseyhightower/envconfig"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -211,6 +213,27 @@ func main() {
 	if *dbName == "" {
 		log.Panicf("Need to specify database name")
 	}
+
+	var env envConfig
+	if err := envconfig.Process("", &env); err != nil {
+		log.Panicf("failed to process env var: %s", err)
+	}
+	// If we've been provided with a directory, defer a function that signals
+	// sidecar that we have exited.
+	// Since defer() is not called on Fatal logging, do not use those :)
+	if env.ExitDir != "" {
+		log.Printf("Exit Dir: %s", env.ExitDir)
+		exitFile := fmt.Sprintf("%s/%s", strings.TrimSuffix(env.ExitDir, "/"), "exitfile")
+		defer func() {
+			_, err := os.Create(exitFile)
+			if err != nil {
+				log.Panic(err)
+			} else {
+				log.Printf("Created exitfile %s", exitFile)
+			}
+		}()
+	}
+
 	connStr := fmt.Sprintf("%s/%s", strings.TrimSuffix(*mysqlURI, "/"), *dbName)
 	ctx := signals.NewContext()
 	db, err := sql.Open("mysql", connStr)

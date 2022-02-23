@@ -38,6 +38,7 @@ func main() {
 
 	if env.Driver == "cloudsql" {
 		log.Printf("Starting the cloud sql proxy")
+
 		cmd := exec.CommandContext(ctx, "/cloud_sql_proxy", "-enable_iam_login")
 		cmd.Env = os.Environ()
 		cmd.Stdout = os.Stdout
