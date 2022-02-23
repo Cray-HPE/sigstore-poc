@@ -9,12 +9,21 @@ set -o pipefail
 
 THIS_OS="$(uname -s)"
 THIS_HW="$(uname -m)"
-echo "RUNNING ON ${THIS_OS}"
+
+RUNNING_ON_MAC="false"
+RUNNING_ON_WINDOWS="false"
+RUNNING_ON_LINUX="true"
+# We need to do couple of things different on Mac
 if [ "${THIS_OS}" == "Darwin" ]; then
-  echo "Running on Darwin"
+  echo "Running on Mac"
   RUNNING_ON_MAC="true"
-else
-  RUNNING_ON_MAC="false"
+  RUNNING_ON_LINUX="false"
+fi
+# We need to do couple of things different on Windows running WSL.
+if uname -r | grep --quiet microsoft ; then
+  echo "Running on Windows"
+  RUNNING_ON_WINDOWS="true"
+  RUNNING_ON_LINUX="false"
 fi
 
 if [ "${THIS_HW}" == "arm64" ]; then
@@ -93,8 +102,8 @@ esac
 echo '::group:: Install KinD'
 
 EXTRA_MOUNT=""
-# This does not work on mac, so skip.
-if [ ${RUNNING_ON_MAC} == "false" ]; then
+# This does not work on Mac, or Windows so skip.
+if [ ${RUNNING_ON_LINUX} == "true" ]; then
   # Disable swap otherwise memory enforcement does not work
   # See: https://kubernetes.slack.com/archives/CEKK1KTN2/p1600009955324200
   sudo swapoff -a
@@ -115,7 +124,6 @@ fi
 
 echo '::endgroup::'
 
-
 #############################################################
 #
 #    Setup KinD cluster.
@@ -123,25 +131,49 @@ echo '::endgroup::'
 #############################################################
 echo '::group:: Build KinD Config'
 
-cat > kind.yaml <<EOF
+if [ ${RUNNING_ON_LINUX} == "true" ]; then
+  cat > kind.yaml <<EOF_LINUX
 apiVersion: kind.x-k8s.io/v1alpha4
 kind: Cluster
 name: sigstore
 nodes:
 - role: control-plane
   image: "${KIND_IMAGE}"
-EOF
-if [ ${RUNNING_ON_MAC} == "false" ]; then
-  cat >> kind.yaml <<EOF_2
   extraMounts:
   - containerPath: /var/lib/etcd
     hostPath: /tmp/etcd
-EOF_2
-fi
-cat >> kind.yaml <<EOF_3
 - role: worker
   image: "${KIND_IMAGE}"
+EOF_LINUX
+fi
 
+if [ ${RUNNING_ON_MAC} == "true" ]; then
+  cat > kind.yaml <<EOF_MAC
+apiVersion: kind.x-k8s.io/v1alpha4
+kind: Cluster
+name: sigstore
+nodes:
+- role: control-plane
+  image: "${KIND_IMAGE}"
+- role: worker
+  image: "${KIND_IMAGE}"
+EOF_MAC
+fi
+
+if [ ${RUNNING_ON_WINDOWS} == "true" ]; then
+  cat > kind.yaml <<EOF_WINDOWS
+apiVersion: kind.x-k8s.io/v1alpha4
+kind: Cluster
+name: sigstore
+nodes:
+- role: control-plane
+  image: "${KIND_IMAGE}"
+- role: worker
+  image: "${KIND_IMAGE}"
+EOF_WINDOWS
+fi
+
+cat >> kind.yaml <<EOF_SHARED
 # Configure registry for KinD.
 containerdConfigPatches:
 - |-
@@ -165,7 +197,7 @@ kubeadmConfigPatches:
         "service-account-jwks-uri": "https://kubernetes.default.svc/openid/v1/jwks"
     networking:
       dnsDomain: "${CLUSTER_SUFFIX}"
-EOF_3
+EOF_SHARED
 
 cat kind.yaml
 echo '::endgroup::'
