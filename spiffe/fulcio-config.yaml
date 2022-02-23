@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fulcio-config
+  namespace: fulcio-system
+data:
+  config.json: |-
+    {
+      "OIDCIssuers": {
+        "https://accounts.google.com": {
+          "IssuerURL": "https://accounts.google.com",
+          "ClientID": "sigstore",
+          "Type": "email"
+        },
+        "https://oidc.vaikas.dev": {
+          "IssuerURL": "https://oidc.vaikas.dev",
+          "ClientID": "sigstore",
+          "Type": "spiffe"
+        },
+        "https://token.actions.githubusercontent.com": {
+          "IssuerURL": "https://token.actions.githubusercontent.com",
+          "ClientID": "sigstore",
+          "Type": "github-workflow"
+        },
+        "https://oauth2.sigstore.dev/auth": {
+          "IssuerURL": "https://oauth2.sigstore.dev/auth",
+          "ClientID": "sigstore",
+          "Type": "email",
+          "IssuerClaim": "$.federated_claims.connector_id"
+        }
+      },
+      "MetaIssuers": {
+        "https://container.googleapis.com/v1/projects/*/locations/*/clusters/*": {
+          "ClientID": "sigstore",
+          "Type": "kubernetes"
+        },
+        "https://oidc.eks.*.amazonaws.com/id/*": {
+          "ClientID": "sigstore",
+          "Type": "kubernetes"
+        },
+        "https://oidc.prod-aks.azure.com/*": {
+          "ClientID": "sigstore",
+          "Type": "kubernetes"
+        }
+      }
+    }
