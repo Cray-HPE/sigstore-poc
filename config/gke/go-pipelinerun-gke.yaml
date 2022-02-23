@@ -40,8 +40,6 @@ spec:
       value: "/data/ctlog-public.pem"
     - name: KO_DOCKER_REPO
       value: gcr.io/chainguard-dev/
-    - name: COSIGN_REPOSITORY
-      value: gcr.io/chainguard-dev/
     - name: fulcio-endpoint
       value: "http://fulcio.fulcio-system.svc"
     - name: rekor-endpoint

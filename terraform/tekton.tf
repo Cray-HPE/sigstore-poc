@@ -5,7 +5,7 @@ resource "helm_release" "tekton_pipelines" {
   version          = var.TK_PIPELINE_HELM_CHART_VERSION
   namespace        = var.TK_PIPELINE_NAMESPACE
   create_namespace = true
-  recreate_pods     = true
+  recreate_pods    = true
   force_update     = true
   cleanup_on_fail  = true
   set {
@@ -22,7 +22,7 @@ resource "helm_release" "tekton_dashboard" {
   namespace        = var.TK_PIPELINE_NAMESPACE
   create_namespace = false
   force_update     = true
-  recreate_pods     = true
+  recreate_pods    = true
   cleanup_on_fail  = true
 }
 
@@ -34,7 +34,7 @@ resource "helm_release" "tekton_chains" {
   namespace        = var.TK_CHAINS_NAMESPACE
   create_namespace = true
   force_update     = true
-  recreate_pods     = true
+  recreate_pods    = true
   cleanup_on_fail  = true
   set {
     name  = "tenantconfig.artifacts\\.oci\\.format"
@@ -66,10 +66,10 @@ resource "helm_release" "tekton_chains" {
   }
 }
 
-data kubernetes_secret "ctlog-public-key" {
+data "kubernetes_secret" "ctlog-public-key" {
   depends_on = [helm_release.sigstore_scaffold]
   metadata {
-    name = "ctlog-public-key"
+    name      = "ctlog-public-key"
     namespace = "ctlog-system"
   }
 }
@@ -77,7 +77,7 @@ data kubernetes_secret "ctlog-public-key" {
 resource "kubernetes_secret" "ctlog-public-key" {
   depends_on = [helm_release.sigstore_scaffold]
   metadata {
-    name = data.kubernetes_secret.ctlog-public-key.metadata[0].name
+    name      = data.kubernetes_secret.ctlog-public-key.metadata[0].name
     namespace = "default"
   }
   data = data.kubernetes_secret.ctlog-public-key.data
