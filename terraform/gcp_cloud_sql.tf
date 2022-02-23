@@ -1,7 +1,3 @@
-data "google_compute_network" "default" {
-  name = "default"
-}
-
 resource "google_service_account" "dbuser_trillian" {
   project    = var.PROJECT_ID
   account_id = "dbuser-trillian"
@@ -29,24 +25,7 @@ resource "google_service_account_iam_member" "gke_sa_iam_member_trillian" {
   depends_on         = [google_service_account.dbuser_trillian]
 }
 
-
-resource "google_compute_global_address" "private_ip_address" {
-  name          = "private-ip-address"
-  purpose       = "VPC_PEERING"
-  address_type  = "INTERNAL"
-  prefix_length = 16
-  network       = data.google_compute_network.default.id
-}
-
-resource "google_service_networking_connection" "private_vpc_connection" {
-
-  network                 = data.google_compute_network.default.id
-  service                 = "servicenetworking.googleapis.com"
-  reserved_peering_ranges = [google_compute_global_address.private_ip_address.name]
-}
-
 resource "google_sql_database_instance" "trillian" {
-  depends_on       = [google_service_networking_connection.private_vpc_connection]
   project          = var.PROJECT_ID
   database_version = "MYSQL_8_0"
   region           = var.DEFAULT_LOCATION
@@ -64,8 +43,7 @@ resource "google_sql_database_instance" "trillian" {
     }
 
     ip_configuration {
-      ipv4_enabled    = true
-      private_network = data.google_compute_network.default.id
+      ipv4_enabled = true
     }
   }
 
