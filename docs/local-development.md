@@ -4,17 +4,38 @@ Local development environment for exercising Tekton and Sigstore running on kind
 
 **Note**: We have to use `--allow-insecure-registry` due to this [cosign bug](https://github.com/sigstore/cosign/issues/1405).
 
-## Notes for macOS
+## Notes for MacOS
 
-You may hit file limits; you can run `sudo launchctl limit maxfiles 65536 200000` to remediate that issue.
+The airplay receiver uses port 5000, which may need to be disabled. Further details via 
+[Apple's developer forum](https://developer.apple.com/forums/thread/682332). Alternatively, you can manually modify the 
+script and change the [REGISTRY_PORT](https://github.com/vaikas/sigstore-scaffolding/blob/main/hack/setup-mac-kind.sh#L19)
 
-The airplay receiver uses port 5000, which may need to be disabled. Further details via [Apple's developer forum](https://developer.apple.com/forums/thread/682332). Alternatively, you can manually modify the script and change the [REGISTRY_PORT](https://github.com/vaikas/sigstore-scaffolding/blob/main/hack/setup-mac-kind.sh#L19)
 
+In order to run through this example, you will need the following installed. For
+Windows installation, the tools will get installed in the WSL (see link below)
+and in particular, I tested this with installing Ubuntu 20.04 LTS. Then all
+the commands are executed in that environment. Also for Windows, you will need
+to install Windows Docker desktop after which you will need to install Docker
+cli on the Linux subsystem.
 
+ * [Docker](https://docs.docker.com/get-docker/)
+ * **Windows Only** [WSL](https://docs.microsoft.com/en-us/windows/wsl/install)
+ * [tkn cli](https://tekton.dev/docs/cli/)
+ * [kubectl](https://kubernetes.io/docs/tasks/tools/)
+ * [rekor-cli](https://docs.sigstore.dev/rekor/installation/)
+ * [cosign](https://github.com/sigstore/cosign/releases)
+ * [yq](https://github.com/mikefarah/yq#install)
+ * [jq](https://stedolan.github.io/jq/download/)
+
+You need to adjust the Docker resource requirements. We have tested these with the following values:
+ * 5 CPUs
+ * 2GB of RAM
+ * 1GB of swap
 
 # Setup Kubernetes cluster
 
-We will setup the local Kubernetes cluster by running the `/hack/kind/setup-kind.sh` script from the root of this repository.
+We will set up the local Kubernetes cluster by running the `/hack/kind/setup-kind.sh` script from the root of this 
+repository.
 
 ```shell
 ./hack/kind/setup-kind.sh
@@ -27,17 +48,28 @@ This script will set up a local Kubernetes kind cluster on your machine with:
  * Tekton Chains / Pipelines
  * Tekton task for fetching GitHub sources
 
-This setup will take a few minutes. Note that you will be prompted for your root password while running the setup script. 
+This setup will take a few minutes. Note that you will be prompted for your root
+password while running the setup script. This is needed on Linux for turning off
+swap as well as mounting a Ram disk. For others, we add a local registry entry
+into /etc/hosts.
 
 **Note**: You may see some errors similar to the following while the script is running. This is fine.
 
 ```
-Error from server (InternalError): error when creating "https://storage.googleapis.com/tekton-releases/chains/latest/release.yaml": Internal error occurred: failed calling webhook "config.webhook.pipeline.tekton.dev": Post "https://tekton-pipelines-webhook.tekton-pipelines.svc:443/config-validation?timeout=10s": dial tcp 10.96.244.5:443: connect: connection refused
+Error from server (InternalError): error when creating 
+"https://storage.googleapis.com/tekton-releases/chains/latest/release.yaml": Internal error occurred: failed calling 
+webhook "config.webhook.pipeline.tekton.dev": Post 
+"https://tekton-pipelines-webhook.tekton-pipelines.svc:443/config-validation?timeout=10s": dial tcp 10.96.244.5:443: 
+connect: connection refused
 ```
 
-They are due to some race conditions when installing Tekton components. There are retries built in, so as long things finish, it's ok. Cleaning those up will require some upstream work.
+They are due to some race conditions when installing Tekton components. There
+are retries built in, so as long things finish, it's ok. Cleaning those up will
+require some upstream work.
 
-Once you get output that ends in the `::endgroup::` line, you'll know this initial setup is completed. The last few lines of the output should resemble the following.
+Once you get output that ends in the `::endgroup::` line, you'll know this
+initial setup is completed. The last few lines of the output should resemble the
+following.
 
 ```
 ...
@@ -48,11 +80,14 @@ clusterrolebinding.rbac.authorization.k8s.io/tekton-dashboard-tenant created
 ::endgroup::
 ```
 
-If you run `docker ps -a` at this point, you should have 3 containers, including a `registry.local`, a `sigstore-worker`, and a `sigstore-control-plane`. 
+If you run `docker ps -a` at this point, you should have 3 containers, including a `registry.local`,
+a `sigstore-worker`, and a `sigstore-control-plane`.
 
 ### Verify sigstore installs
 
-There are two jobs that run to verify the installation. The first is `check-oidc` which signs an image with Cosign, and the second is `checktree` which ensures it's properly added to the Rekor transparency log. Both of them should show `1/1` completions.
+There are two jobs that run to verify the installation. The first is `check-oidc` which signs an image with Cosign, 
+and the second is `checktree` which ensures it's properly added to the Rekor transparency log. Both of them should 
+show `1/1` completions.
 
 ```bash
 kubectl get jobs
@@ -73,7 +108,7 @@ kubectl logs $i
 done
 ```
 
-A small snippet of the output you get should be similar to the following. 
+A small snippet of the output you get should be similar to the following.
 
 ```
 Generating ephemeral keys...
@@ -90,33 +125,21 @@ Pushing signature to: knative
 2022/02/10 22:57:56 Found index entry: e0beca412f78687deef90f1e7aacbe022d0968ec9c12dd36fb7374f0102e08a8
 ```
 
-We will need to setup port forwarding at this point.
+At this point, we can move onto Tekton.
+
+# Tekton overview
+
+[Tekton](https://tekton.dev/) is an open-source framework for building CI/CD
+systems that we use to demonstrate setting up SLSA compliant environment.
+
+## Network access
+
+We will need to setup port forwarding at this point, so that our tools can run
+against the services on the kind cluster.
 
 ```shell
 kubectl -n kourier-system port-forward service/kourier-internal 8080:80 &
 ```
-
-Now, you'll be able to test Rekor.
-
-```bash
-curl http://rekor.rekor-system.svc:8080/api/v1/log/
-```
-
-Running the above should generate output that resembles the following. 
-
-```
-{
-  "rootHash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-  "signedTreeHead":"Rekor\n0\n47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=\nTimestamp: 1644340477773818665\n\n— rekor.sigstore.dev LJZ0/DBFAiBkWCXKJWbDUzwozFh0HO8flMJu40Bdd5wpf/p2yF0brgIhAMx+Csi20A25zziQuacUaCKWBXpkG52Br0eKgcNrKzjI\n",
-  "treeSize":0
-}
-```
-
-At this point, we can move onto Tekton. 
-
-# Tekton overview
-
-## Network access
 
 ### Adding localhost entries to make tools usable
 
@@ -128,13 +151,29 @@ First, add the following entries to your `/etc/hosts` file:
 127.0.0.1 ctlog.ctlog-system.svc
 ```
 
-This makes using tooling easier, for example:
+This makes using tooling easier, for example using curl:
+
+```bash
+curl http://rekor.rekor-system.svc:8080/api/v1/log/ | jq -r .
+```
+
+Running the above should generate output that resembles the following.
+
+```
+{
+  "rootHash": "2ff1d12e293267b3ad3ee728e0cf3f07d34c19a32dba444ca01f11981c0f7f9f",
+  "signedTreeHead": "Rekor\n1\nL/HRLikyZ7OtPuco4M8/B9NMGaMtukRMoB8RmBwPf58=\nTimestamp: 1645646556828349221\n\n— rekor.sigstore.dev VWCOczBEAiBl7W6/nhXqokcTsp+rLT5X9nsxljBwbFhKKn+0Bs4qxgIgaELEBelPnXwSh1vd0WP/npMelzK9cEHxn/rpYkOV9oE=\n",
+  "treeSize": 1
+}
+```
+
+And using rekor-cli:
 
 ```shell
 rekor-cli --rekor_server http://rekor.rekor-system.svc:8080 loginfo
 ```
 
-After smoke tests have successfully completed, you'll receive output similar to this: 
+After smoke tests have successfully completed, you'll receive output similar to this:
 
 ```
 No previous log state stored, unable to prove consistency
@@ -144,11 +183,15 @@ Root Hash: 062e2fa50e2b523f9cfd4eadc4b67745436226d64bf9799d57c5dc023681c4b8
 Timestamp: 2022-02-04T22:09:46Z
 ```
 
-If you run through this example more than once, you can remove the `/.rekor/state.json` file in order to get verification output again. Or alternatively you can invoke rekor-cli with `--store_tree_state=false` flag. Otherwise rekor-cli will complain that the state of the tree is suspect (which it is, since we recreated it :) ).
+If you run through this example more than once, you can remove the `/.rekor/state.json` file in order to get 
+verification output again. Or alternatively you can invoke rekor-cli with `--store_tree_state=false` flag. 
+Otherwise, rekor-cli will complain that the state of the tree is suspect (which it is, since we recreated it :) ).
 
 ### Certificates
 
-There are two certificates that we need; the CT Log and Fulcio root certs. Note that if you are switching back and forth between public and your instance, you may not want to export these variables (or unexport them when switching to public instances).
+There are two certificates that we need; the CT Log and Fulcio root certs. Note that if you are switching back and 
+forth between public and your instance, you may not want to export these variables (or unexport them when switching 
+to public instances).
 
 Get the CT Log public certificate:
 
@@ -166,7 +209,9 @@ export SIGSTORE_ROOT_FILE=./fulcio-root.pem
 
 # Running through Tekton tasks
 
-Once you've installed the above, you can install the Tekton task and pipeline pieces. This is a very rough beginning of a proper Python pipeline and is meant to demonstrate breaking the large build into multiple steps and providing attestations at each level via Tekton Chains.
+Once you've installed the above, you can install the Tekton task and pipeline pieces. This is a very rough beginning of 
+a proper Python pipeline and is meant to demonstrate breaking the large build into multiple steps and providing 
+attestations at each level via Tekton Chains.
 
 ## Install tasks and pipelines
 
@@ -203,7 +248,7 @@ pipeline.tekton.dev/go-build-pipeline       38s
 pipeline.tekton.dev/python-build-pipeline   44s
 ```
 
-We'll run the Python pipeline next. 
+We'll run the Python pipeline next.
 
 ## Run Python pipeline
 
@@ -219,58 +264,97 @@ The pipeline should complete successfully, which you can follow along by checkin
 kubectl get pipelineruns -w
 ```
 
+After a while it should succeed like this:
 ```
 bare-build-pipeline-run   True        Succeeded   6h13m       6h12m
 ```
 
-You can view the logs of the pipeline run with the [tkn cli](https://tekton.dev/docs/cli/).
-
-```shell
-tkn pipelineruns logs bare-build-pipeline-run -f
-```
-
-If you have Tekton dashboard installed, you can run the below to view it.
-
-```bash
-kubectl port-forward svc/tekton-dashboard 9097:9097 -n tekton-pipelines
-```
-
-![Screenshot of Tekton dashboard](../images/tekton-dashboards.png)
-
-When the pipeline finishes, you'll receive the following output in the logs.
-
-```shell
-[source-to-image : build-and-push] INFO[0008] Pushing image to registry.local:5000/knative/pythontest:0.1
-[source-to-image : build-and-push] INFO[0010] Pushed image to 1 destinations
-
-
-[source-to-image : digest-to-results] sha256:824e9a8a00d5915bc87e25316dfbb19dbcae292970b02a464e2da1a665c7d54b
-```
-
-![Tekton pipeline](../images/tekton-pipeline.png)
-
 ## Inspect results
 
-As part of the pipeline run we create a container image for it, sign it with Cosign, create an SBOM, and perform a Trivy scan for it.
+As part of the pipeline run we create a container image for it, sign it with Cosign, create an SBOM, and perform a 
+Trivy scan for it.
 
-To review the concise and clear overview of the pipeline run, use the tkn cli. 
+To review the concise and clear overview of the pipeline run, use the tkn cli.
 
 ```
 tkn pr describe bare-build-pipeline-run
 ```
 
-You can review the digest in the **Results** section. To reduce cutting and pasting, let's grab it into an `ENV` variable for later steps:
+The output from above should look something like this (abbreviated here):
+```
+Name:              bare-build-pipeline-run
+Namespace:         default
+Pipeline Ref:      python-build-pipeline
+<SNIP>
+ ∙ bare-build-pipeline-run-source-to-image        source-to-image        6 hours ago   20 seconds   Succeeded
+ ∙ bare-build-pipeline-run-list-dependencies      list-dependencies      6 hours ago   6 seconds    Succeeded
+ ∙ bare-build-pipeline-run-install-dependencies   install-dependencies   6 hours ago   13 seconds   Succeeded
+ ∙ bare-build-pipeline-run-fetch-from-git         fetch-from-git         6 hours ago   8 seconds    Succeeded
+```
+
+
+You can review the digest in the **Results** section. To reduce cutting and pasting, let's grab it into an `ENV` 
+variable for later steps:
 
 ```shell
 IMAGE_ID=$(kubectl get taskruns bare-build-pipeline-run-source-to-image -o jsonpath='{.spec.params[0].value}' | awk -F ":" '{print $1":"$2}')@$(kubectl get taskruns bare-build-pipeline-run-source-to-image -o jsonpath='{.status.taskResults[0].value}')
 ```
 
-You should get output that looks something like so:
+You can inspect the IMAGE_ID that was created with:
 
 ```shell
 echo $IMAGE_ID
+```
+
+This should output something like so:
+```
 registry.local:5000/knative/pythontest@sha256:aebbd2977c66b5a5f53fe9af2a52ae129203e560cb7480930535124874a6e3b1
 ```
+
+Verify the image was built correctly:
+```
+docker run $IMAGE_ID
+```
+
+You should see something like this:
+```
+Unable to find image 'registry.local:5000/knative/pythontest@sha256:ef3a2828fa01e9d4b1e42a4e89cc02f0a447797fa7b94abc937f6573e34e5710' locally
+registry.local:5000/knative/pythontest@sha256:ef3a2828fa01e9d4b1e42a4e89cc02f0a447797fa7b94abc937f6573e34e5710: Pulling from knative/pythontest
+927a35006d93: Already exists
+5cbfa4e6f5b5: Already exists
+959a6776893a: Already exists
+cf92abb5f192: Already exists
+2c067721f313: Already exists
+318918a7be9b: Pull complete
+48ad511cde95: Pull complete
+1a9840e34540: Pull complete
+b432ae5a0abc: Pull complete
+Digest: sha256:ef3a2828fa01e9d4b1e42a4e89cc02f0a447797fa7b94abc937f6573e34e5710
+Status: Downloaded newer image for registry.local:5000/knative/pythontest@sha256:ef3a2828fa01e9d4b1e42a4e89cc02f0a447797fa7b94abc937f6573e34e5710
+
+
+    XX  XX  XX  XX  XX  XX  XX  XX  XX  XX
+    XX  XX  XX  XXXX    XX  XX      XX  XXXX
+    XXXX  XX    XX    XXXX    XXXXXX    XX
+    XX    XXXX      XXXX  XXXX        XX  XX
+    XX    XX    XXXX      XX  XX
+    XXXXXX  XX  XX  XX  XXXX  XXXXXX    XXXX
+    XXXX  XX          XXXX  XXXX    XX  XX
+    XXXX      XX  XXXXXX  XXXX        XXXXXX
+    XX    XX      XX  XXXXXX    XX  XX  XX
+    XX  XX    XXXX  XX  XXXX    XXXXXX    XX
+    XXXX      XX  XX    XXXX  XXXXXX  XX
+    XX  XX  XXXXXX  XX    XX  XXXX  XX    XX
+    XX          XX      XXXX  XX  XXXXXXXX
+    XXXXXX  XXXXXX  XXXX  XXXXXXXXXXXX    XX
+    XX  XXXXXX  XX    XX      XXXXXXXX
+    XX    XX    XX  XX  XX    XXXXXXXXXX  XX
+    XX  XXXXXXXX  XX    XXXXXX  XX  XX  XX
+    XX  XX        XXXX  XX  XXXX  XX      XX
+    XXXX  XX  XXXX    XX      XX  XXXX
+    XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+```
+
 
 Verify that the image was signed.
 
@@ -329,7 +413,8 @@ The following checks were performed on each of these signatures:
   - Any certificates were verified against the Fulcio roots.
 ```
 
-Verify the Tekton Chains by choosing one of the steps. We can do this for any of the taskruns, but let's do the one that does the build. Tekton stores this information in the Taskrun annotations, so let's pull out the transparency entry.
+Verify the Tekton Chains by choosing one of the steps. We can do this for any of the taskruns, but let's do the one 
+that does the build. Tekton stores this information in the Taskrun annotations, so let's pull out the transparency entry.
 
 ```shell
 kubectl get taskruns bare-build-pipeline-run-source-to-image -ojsonpath='{.metadata.annotations.chains\.tekton\.dev/transparency}'
@@ -338,8 +423,7 @@ kubectl get taskruns bare-build-pipeline-run-source-to-image -ojsonpath='{.metad
 This should print something similar to the following.
 
 ```
-kubectl get taskruns bare-build-pipeline-run-source-to-image -ojsonpath='{.metadata.annotations.chains\.tekton\.dev/transparency}'
-http://rekor.rekor-system.svc/api/v1/log/entries?logIndex=40%
+http://rekor.rekor-system.svc/api/v1/log/entries?logIndex=7%
 ```
 
 We can then fetch the corresponding entry from the Rekor log with:
@@ -377,16 +461,59 @@ tkn tr describe --last -o jsonpath="{.metadata.annotations.chains\.tekton\.dev/s
 tkn tr describe --last -o jsonpath="{.metadata.annotations.chains\.tekton\.dev/payload-taskrun-$TASKRUN_UID}" | base64 -d > payload
 ```
 
-***TODO(vaikas): THIS STEP DOES NOT WORK YET WITH INDEXING ISSUES***
+***TODO(vaikas): THIS STEP DOES NOT WORK YET WITH [INDEXING ISSUES](https://github.com/tektoncd/chains/issues/376)***
 Then you can verify the integrity by running cosign again:
 
 ```
 COSIGN_EXPERIMENTAL=1 cosign verify-blob --rekor-url=http://rekor.rekor-system.svc:8080 --allow-insecure-registry --signature ./signature ./payload
 ```
 
+# Additional Tekton resources + tips
+
+**note for MacOS users** You may hit file limits; you can run
+```
+sudo launchctl limit maxfiles 65536 200000
+```
+to remediate that issue.
+
+The above is the "speed run" of the tools and validate that you're up and
+running. While doing development work for your own Pipelines, here are ways to
+to get more insights into running pipelines.
+
+You can view the logs of the pipeline run with the
+[tkn cli](https://tekton.dev/docs/cli/). The -f flag streams them in realtime.
+
+```shell
+tkn pipelineruns logs bare-build-pipeline-run -f
+```
+
+Since we also installed Tekton dashboard, you can also run the below to view it.
+
+```bash
+kubectl port-forward svc/tekton-dashboard 9097:9097 -n tekton-pipelines &
+```
+
+Then open your browser to [http://localhost:9097](http://localhost:9097)
+
+![Screenshot of Tekton dashboard](../images/tekton-dashboards.png)
+
+When the pipeline finishes, you'll receive the following output in the logs.
+
+```shell
+[source-to-image : build-and-push] INFO[0008] Pushing image to registry.local:5000/knative/pythontest:0.1
+[source-to-image : build-and-push] INFO[0010] Pushed image to 1 destinations
+
+
+[source-to-image : digest-to-results] sha256:824e9a8a00d5915bc87e25316dfbb19dbcae292970b02a464e2da1a665c7d54b
+```
+
+![Tekton pipeline](../images/tekton-pipeline.png)
+
+
 # Cleaning up
 
-To clean up the cluster as well as a local Docker registry daemon container, run `/hack/kind/teardown-kind.sh` script from the root of this repository.
+To clean up the cluster as well as a local Docker registry daemon container, run `/hack/kind/teardown-kind.sh` 
+script from the root of this repository.
 
 ```shell
 ./hack/kind/teardown-kind.sh
