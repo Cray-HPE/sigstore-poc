@@ -21,10 +21,7 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 #
-.
-# SPDX-License-Identifier: Apache-2.0
 
 defaultBaseImage: gcr.io/distroless/static:nonroot
 baseImageOverrides:
-  # TODO(jdolitsky): this image does not work for arm64
   chainguard.dev/sqlproxy/cmd: gcr.io/cloudsql-docker/gce-proxy:1.27.0
