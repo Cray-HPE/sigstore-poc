@@ -111,13 +111,33 @@ Pushing signature to: knative
 2022/02/10 22:57:56 Found index entry: e0beca412f78687deef90f1e7aacbe022d0968ec9c12dd36fb7374f0102e08a8
 ```
 
-We will need to setup port forwarding at this point.
+At this point, we can move onto Tekton.
+
+# Tekton overview
+
+[Tekton](https://tekton.dev/) is an open-source framework for building CI/CD
+systems that we use to demonstrate setting up SLSA compliant environment.
+
+## Network access
+
+We will need to setup port forwarding at this point, so that our tools can run
+against the services on the kind cluster.
 
 ```shell
 kubectl -n kourier-system port-forward service/kourier-internal 8080:80 &
 ```
 
-Now, you'll be able to test Rekor.
+### Adding localhost entries to make tools usable
+
+First, add the following entries to your `/etc/hosts` file:
+
+```
+127.0.0.1 rekor.rekor-system.svc
+127.0.0.1 fulcio.fulcio-system.svc
+127.0.0.1 ctlog.ctlog-system.svc
+```
+
+This makes using tooling easier, for example using curl:
 
 ```bash
 curl http://rekor.rekor-system.svc:8080/api/v1/log/ | jq -r .
@@ -133,23 +153,7 @@ Running the above should generate output that resembles the following.
 }
 ```
 
-At this point, we can move onto Tekton.
-
-# Tekton overview
-
-## Network access
-
-### Adding localhost entries to make tools usable
-
-First, add the following entries to your `/etc/hosts` file:
-
-```
-127.0.0.1 rekor.rekor-system.svc
-127.0.0.1 fulcio.fulcio-system.svc
-127.0.0.1 ctlog.ctlog-system.svc
-```
-
-This makes using tooling easier, for example:
+And using rekor-cli:
 
 ```shell
 rekor-cli --rekor_server http://rekor.rekor-system.svc:8080 loginfo
