@@ -50,7 +50,6 @@ spec:
         - name: output
           workspace: git-source
     - name: install-dependencies
-      retries: 2
       runAfter:
       - fetch-from-git
       taskRef:

@@ -28,6 +28,3 @@ variable `ORM_DRIVER`. Setting it to `cloudsql` means it will connect to GCP
 cloud SQL instance defined by `INSTANCES` environmental variable. In addition
 to these flags, the serviceaccount that the pod is running as must have
 access to the Cloud SQL.
-
-
-

@@ -141,28 +141,11 @@ k logs deployment/rekor-server -n rekor-system
   "Platform": "linux/amd64"
 }
 2022-02-23T18:29:56.397Z        INFO    app/serve.go:97 Loading support for pluggable type 'helm'
-2022-02-23T18:29:56.397Z        INFO    app/serve.go:98 Loading version '0.0.1' for pluggable type 'helm'
-2022-02-23T18:29:56.397Z        INFO    app/serve.go:97 Loading support for pluggable type 'hashedrekord'
-2022-02-23T18:29:56.397Z        INFO    app/serve.go:98 Loading version '0.0.1' for pluggable type 'hashedrekord'
-2022-02-23T18:29:56.397Z        INFO    app/serve.go:97 Loading support for pluggable type 'rpm'
-2022-02-23T18:29:56.397Z        INFO    app/serve.go:98 Loading version '0.0.1' for pluggable type 'rpm'
-2022-02-23T18:29:56.397Z        INFO    app/serve.go:97 Loading support for pluggable type 'jar'
-2022-02-23T18:29:56.397Z        INFO    app/serve.go:98 Loading version '0.0.1' for pluggable type 'jar'
-2022-02-23T18:29:56.397Z        INFO    app/serve.go:97 Loading support for pluggable type 'alpine'
-2022-02-23T18:29:56.397Z        INFO    app/serve.go:98 Loading version '0.0.1' for pluggable type 'alpine'
-2022-02-23T18:29:56.397Z        INFO    app/serve.go:97 Loading support for pluggable type 'tuf'
-2022-02-23T18:29:56.397Z        INFO    app/serve.go:98 Loading version '0.0.1' for pluggable type 'tuf'
-2022-02-23T18:29:56.397Z        INFO    app/serve.go:97 Loading support for pluggable type 'rekord'
-2022-02-23T18:29:56.397Z        INFO    app/serve.go:98 Loading version '0.0.1' for pluggable type 'rekord'
-2022-02-23T18:29:56.397Z        INFO    app/serve.go:97 Loading support for pluggable type 'intoto'
-2022-02-23T18:29:56.397Z        INFO    app/serve.go:98 Loading version '0.0.1' for pluggable type 'intoto'
-2022-02-23T18:29:56.397Z        INFO    app/serve.go:97 Loading support for pluggable type 'rfc3161'
-2022-02-23T18:29:56.397Z        INFO    app/serve.go:98 Loading version '0.0.1' for pluggable type 'rfc3161'
 2022-02-23T18:29:56.401Z        INFO    storage/storage.go:40   Configuring attestation storage at file:///var/run/attestations
 2022-02-23T18:29:56.420Z        INFO    restapi/server.go:234   Serving rekor server at http://[::]:3000
 ```
 
-We didn't deploy the sigstore pieces with ingress so let's use kubectl port-forward to make requests to rekor and fulcio
+We didn't deploy the sigstore pieces with ingress so let's use kubectl port-forward to make requests to Rekor and fulcio
 
 ```bash
 kubectl port-forward svc/fulcio 8081:80 -n fulcio-system &
@@ -188,7 +171,7 @@ This will match the Subject from Terraform Google CA deployment
 Testing Rekor
 
 ```bash
- curl http://rekor.rekor-system.svc/api/v1/log/
+ curl http://rekor.rekor-system.svc:8080/api/v1/log/
 ```
 
 ```
@@ -350,7 +333,7 @@ TASK_NAME=build-pipeline-run-f57dc-source-to-image
 The Source to image task will produce the image id of the container it built and push to the registry
 
 ```shell
-IMAGE_ID=$(kubectl get taskruns ${TASK_NAME} -o jsonpath='{.spec.params[0].value}' | sed 's/:0.1//')@$(kubectl get taskruns ${TASK_NAME} -o jsonpath='{.status.taskResults[0].value}')
+IMAGE_ID=$(kubectl get taskruns ${TASK_NAME} -o jsonpath='{.status.taskResults[0].value}')
 ```
 
 Example image id
@@ -358,14 +341,6 @@ Example image id
 ```bash
 echo $IMAGE_ID
 gcr.io/chainguard-dev/pythontest@sha256:c089acd03a21830c329d70f61cefa2a29c43e59ebc848581043b631451dfffa7
-```
-
-Get the SBOM:
-
-Pull down the Root CA from fulcio, Make sure you have set up Network Access
-
-```bash
-curl http://fulcio.fulcio-system.svc:8081/api/v1/rootCert > ./fulcio-root.pem
 ```
 
 Ensure the image was Signed:
@@ -386,7 +361,6 @@ The following checks were performed on each of these signatures:
 
   [{"critical":{"identity":{"docker-reference":"registry.local:5000/knative/pythontest"},"image":{"docker-manifest-digest":"sha256:63a<SNIPPED HERE FOR READABILITY>
 ```
-
 
 Now download the SBOM
 
