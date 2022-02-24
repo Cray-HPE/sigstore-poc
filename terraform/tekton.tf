@@ -49,7 +49,7 @@ resource "helm_release" "tekton_chains" {
     value = "in-toto"
   }
   set {
-    name  = "tenantconfig.signers\\.x509\\.fulcio\\.address"
+    name  = "tenantconfig.signers\\.x509\\.fulcio\\.address" # Connect chains to fulcio service
     value = "http://fulcio.fulcio-system.svc"
   }
   set {
@@ -61,11 +61,13 @@ resource "helm_release" "tekton_chains" {
     value = "true"
   }
   set {
-    name  = "tenantconfig.transparency\\.url"
+    name  = "tenantconfig.transparency\\.url" # Connect chains to rekor service
     value = "http://rekor-server.rekor-system.svc:3000"
   }
 }
 
+# Chains needs access to the ctlog public key, it is created in the ctlog-system namespace.
+# This copies it into the default namespaces where the pipelines are ran.
 data "kubernetes_secret" "ctlog-public-key" {
   depends_on = [helm_release.sigstore_scaffold]
   metadata {

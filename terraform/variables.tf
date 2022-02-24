@@ -81,7 +81,7 @@ variable "SIGSTORE_HELM_LOCAL_PATH" {
 }
 
 variable "SIGSTORE_HELM_VERSION" {
-  default     = "v0.1.2"
+  default     = "v0.1.0"
   type        = string
   description = "Helm chart version of sigstore scaffolding deploy"
 }

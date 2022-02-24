@@ -1,3 +1,8 @@
+resource "google_container_registry" "registry" {
+  project  = var.PROJECT_ID
+  location = "US"
+}
+
 # Service Account for GKE nodes
 resource "google_service_account" "gke_user" {
   account_id   = "gke-user-${var.WORKSPACE_ID}"
@@ -19,7 +24,7 @@ resource "google_service_account" "gke_workload" {
   project      = var.PROJECT_ID
 }
 
-# Allow the workload SA to
+# Allow the workload KSA to assume GSA
 resource "google_service_account_iam_member" "workload_account_iam" {
   role               = "roles/iam.workloadIdentityUser"
   member             = "serviceAccount:${var.PROJECT_ID}.svc.id.goog[default/gke-user]"
@@ -27,6 +32,7 @@ resource "google_service_account_iam_member" "workload_account_iam" {
   depends_on         = [google_service_account.gke_workload]
 }
 
+//GSA Access to storage for repo
 resource "google_project_iam_member" "storage_admin_member" {
   project    = var.PROJECT_ID
   role       = "roles/storage.admin"
@@ -34,6 +40,7 @@ resource "google_project_iam_member" "storage_admin_member" {
   depends_on = [google_service_account.gke_workload]
 }
 
+//GSA access to Google CA
 resource "google_project_iam_member" "private_ca_member" {
   project    = var.PROJECT_ID
   role       = "roles/privateca.admin"
@@ -50,6 +57,7 @@ resource "kubernetes_service_account" "gcr" {
   }
 }
 
+//GKE Cluster
 resource "google_container_cluster" "primary" {
   name               = "chainguard-dev-${var.WORKSPACE_ID}"
   location           = var.CLUSTER_LOCATION != "" ? var.CLUSTER_LOCATION : var.DEFAULT_LOCATION

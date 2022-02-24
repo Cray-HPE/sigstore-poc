@@ -29,7 +29,7 @@ include .env
 TK_CHAINS_HELM_CHART_VERSION="0.2.2"
 TK_DASHBOARD_HELM_CHART_VERSION="0.2.0"
 TK_PIPELINE_HELM_CHART_VERSION="v0.2.1"
-SIGSTORE_HELM_VERSION="0.1.3"
+SIGSTORE_HELM_VERSION="0.1.0"
 export
 
 dev_cluster:
@@ -75,7 +75,8 @@ tf_target_plan:
 	-var="TRILLIAN_PASSWORD=${TRILLIAN_PASSWORD}" \
 	-target=google_container_cluster.primary \
 	-target=google_service_account.gke-user \
-	-target=google_project_iam_member.gcr_member
+	-target=google_project_iam_member.gcr_member \
+	-target=google_container_registry.registry
 
 tf_target_apply:
 	GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} \
@@ -95,6 +96,7 @@ tf_target_apply:
 	-target=google_container_cluster.primary \
 	-target=google_service_account.gke-user \
 	-target=google_project_iam_member.gcr_member \
+	-target=google_container_registry.registry \
 	-auto-approve
 
 
@@ -153,6 +155,7 @@ tf_target_destroy:
 	-target=google_container_cluster.primary \
 	-target=google_service_account.gke-user \
 	-target=google_project_iam_member.gcr_member \
+	-target=google_container_registry.registry
 	-auto-approve
 
 tf_destroy:

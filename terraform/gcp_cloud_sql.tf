@@ -3,6 +3,7 @@ resource "google_service_account" "dbuser_trillian" {
   account_id = "dbuser-trillian"
 }
 
+//Allow trillian SA to run CloudSql proxy
 resource "google_project_iam_member" "db_admin_member_trillian" {
   project    = var.PROJECT_ID
   role       = "roles/cloudsql.admin"
@@ -17,6 +18,7 @@ resource "google_project_iam_member" "gcs_member_trillian" {
   depends_on = [google_service_account.dbuser_trillian]
 }
 
+//Allow each Trillian KSA to assume GSA
 resource "google_service_account_iam_member" "gke_sa_iam_member_trillian" {
   service_account_id = google_service_account.dbuser_trillian.name
   role               = "roles/iam.workloadIdentityUser"
@@ -70,6 +72,7 @@ variable "TRILLIAN_PASSWORD" {
   description = "trillian client mysql password"
 }
 
+//User for applications
 resource "google_sql_user" "trillian" {
   project  = var.PROJECT_ID
   name     = var.TRILLIAN_USERNAME

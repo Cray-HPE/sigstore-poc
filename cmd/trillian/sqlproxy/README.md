@@ -19,9 +19,7 @@ an env variable `EXIT_DIR`. The "main" container simply needs to create _any_
 file in this directory, which will signal the proxy to exit. Reasoning for
 any file, rather than a specific is to just make it simpler to utilize this
 mechanism. It's probably the easiest to create a defer function that creates
-an [empty file](../trillian/cmd/createdb/main.go), and an example of using the
-emptydir and seting the correct mounts is
-[here](../trillian/config/saas/createdb/300-createdb.yaml). One thing to keep
+an [empty file](../trillian/cmd/createdb/main.go). One thing to keep
 in mind is that if you use the defer mechanism is to make sure you do not call
 log.Fatal since that will prevent any defer functions from running.
 
@@ -30,3 +28,6 @@ variable `ORM_DRIVER`. Setting it to `cloudsql` means it will connect to GCP
 cloud SQL instance defined by `INSTANCES` environmental variable. In addition
 to these flags, the serviceaccount that the pod is running as must have
 access to the Cloud SQL.
+
+
+

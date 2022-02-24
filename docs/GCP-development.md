@@ -20,9 +20,9 @@ for Python and Kind and/or GCP/GKE.
    4. Trivy CVE Scanning
 5. Verify results with Cosign
 
-## Kubernetes Cluster
+## GCP Development
 
-### GCP Development
+### Kubernetes Cluster
 
 Terraform will create the Trillian MySQL database, the Google CA, GKE Cluster and 
 install Tekton Pipelines, Dashboard and Chains via Helm and Sigstore via helm
@@ -35,6 +35,25 @@ You will need to have gcloud [installed](https://cloud.google.com/sdk/docs/insta
 Set the GOOGLE_APPLICATION_CREDENTIALS path to where `gcloud auth application-default login` places your credentials file
 
 Usually that is `$HOME/.config/gcloud/application_default_credentials.json` 
+
+Let's build the GKE Cluster, Roles and GCR Repo
+
+```bash
+make tf_init tf_target_plan tf_target_apply 
+```
+
+
+**NOTE** Since we are using GCP SQL instance, we need to use CloudSQL Proxy, now that cuases issues with a sidecars and 
+Kubernetes Jobs, see this [KEP for more information](https://github.com/kubernetes/enhancements/issues/2872). 
+So we have own process for dealing with this, we can use the images stored in the defaults. Or rebuild your own and use those.
+[SQLproxy is here](cmd/trillian/sqlproxy)
+
+We can use `ko` to build and push those images to gcr. https://github.com/google/ko
+
+```shell
+KO_DOCKER_REPO=gcr.io/YOURPROJECT/sqlproxy ko build --platform=all sigstore-poc/cmd/trillian/sqlproxy/cmd -B
+KO_DOCKER_REPO=gcr.io/YOURPROJECT/ ko build --platform=all sigstore-poc/cmd/trillian/createdb/ -B
+```
 
 We need to make sure we have the helm charts locally as they are not stored in Artifactory hub.
 
@@ -62,7 +81,7 @@ TRILLIAN_PASSWORD=trillian
 Now we can deploy everything with Terraform
 
 ```bash
-make tf_init tf_target_plan tf_target_apply tf_plan tf_apply
+make tf_plan tf_apply
 
 Apply complete! Resources: 29 added, 29 changed, 0 destroyed.
 
@@ -343,7 +362,7 @@ gcr.io/chainguard-dev/pythontest@sha256:c089acd03a21830c329d70f61cefa2a29c43e59e
 
 Get the SBOM:
 
-Pull down the Root CA from fulcio, Make sure you have set up [Network Access](#network)
+Pull down the Root CA from fulcio, Make sure you have set up Network Access
 
 ```bash
 curl http://fulcio.fulcio-system.svc:8081/api/v1/rootCert > ./fulcio-root.pem

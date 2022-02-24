@@ -65,7 +65,6 @@ resource "google_privateca_certificate_authority" "default" {
   ]
 }
 
-
 # Allows the createcerts k8s SA to the assume the google SA
 resource "google_service_account_iam_member" "createcerts_account_iam" {
   role               = "roles/iam.workloadIdentityUser"
