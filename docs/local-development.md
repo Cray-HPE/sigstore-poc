@@ -4,9 +4,7 @@ Local development environment for exercising Tekton and Sigstore running on kind
 
 **Note**: We have to use `--allow-insecure-registry` due to this [cosign bug](https://github.com/sigstore/cosign/issues/1405).
 
-## Notes for macOS
-
-You may hit file limits; you can run `sudo launchctl limit maxfiles 65536 200000` to remediate that issue.
+## Notes for MacOS
 
 The airplay receiver uses port 5000, which may need to be disabled. Further details via [Apple's developer forum](https://developer.apple.com/forums/thread/682332). Alternatively, you can manually modify the script and change the [REGISTRY_PORT](https://github.com/vaikas/sigstore-scaffolding/blob/main/hack/setup-mac-kind.sh#L19)
 
@@ -27,6 +25,11 @@ cli on the Linux subsystem.
  * [cosign](https://github.com/sigstore/cosign/releases)
  * [yq](https://github.com/mikefarah/yq#install)
  * [jq](https://stedolan.github.io/jq/download/)
+
+You need to adjust the Docker resource requirements. We have tested these with the following values:
+ * 5 CPUs
+ * 2GB of RAM
+ * 1GB of swap
 
 # Setup Kubernetes cluster
 
@@ -113,13 +116,33 @@ Pushing signature to: knative
 2022/02/10 22:57:56 Found index entry: e0beca412f78687deef90f1e7aacbe022d0968ec9c12dd36fb7374f0102e08a8
 ```
 
-We will need to setup port forwarding at this point.
+At this point, we can move onto Tekton.
+
+# Tekton overview
+
+[Tekton](https://tekton.dev/) is an open-source framework for building CI/CD
+systems that we use to demonstrate setting up SLSA compliant environment.
+
+## Network access
+
+We will need to setup port forwarding at this point, so that our tools can run
+against the services on the kind cluster.
 
 ```shell
 kubectl -n kourier-system port-forward service/kourier-internal 8080:80 &
 ```
 
-Now, you'll be able to test Rekor.
+### Adding localhost entries to make tools usable
+
+First, add the following entries to your `/etc/hosts` file:
+
+```
+127.0.0.1 rekor.rekor-system.svc
+127.0.0.1 fulcio.fulcio-system.svc
+127.0.0.1 ctlog.ctlog-system.svc
+```
+
+This makes using tooling easier, for example using curl:
 
 ```bash
 curl http://rekor.rekor-system.svc:8080/api/v1/log/ | jq -r .
@@ -135,23 +158,7 @@ Running the above should generate output that resembles the following.
 }
 ```
 
-At this point, we can move onto Tekton.
-
-# Tekton overview
-
-## Network access
-
-### Adding localhost entries to make tools usable
-
-First, add the following entries to your `/etc/hosts` file:
-
-```
-127.0.0.1 rekor.rekor-system.svc
-127.0.0.1 fulcio.fulcio-system.svc
-127.0.0.1 ctlog.ctlog-system.svc
-```
-
-This makes using tooling easier, for example:
+And using rekor-cli:
 
 ```shell
 rekor-cli --rekor_server http://rekor.rekor-system.svc:8080 loginfo
@@ -256,6 +263,19 @@ To review the concise and clear overview of the pipeline run, use the tkn cli.
 ```
 tkn pr describe bare-build-pipeline-run
 ```
+
+The output from above should look something like this (abbreviated here):
+```
+Name:              bare-build-pipeline-run
+Namespace:         default
+Pipeline Ref:      python-build-pipeline
+<SNIP>
+ ∙ bare-build-pipeline-run-source-to-image        source-to-image        6 hours ago   20 seconds   Succeeded
+ ∙ bare-build-pipeline-run-list-dependencies      list-dependencies      6 hours ago   6 seconds    Succeeded
+ ∙ bare-build-pipeline-run-install-dependencies   install-dependencies   6 hours ago   13 seconds   Succeeded
+ ∙ bare-build-pipeline-run-fetch-from-git         fetch-from-git         6 hours ago   8 seconds    Succeeded
+```
+
 
 You can review the digest in the **Results** section. To reduce cutting and pasting, let's grab it into an `ENV` variable for later steps:
 
@@ -385,8 +405,7 @@ kubectl get taskruns bare-build-pipeline-run-source-to-image -ojsonpath='{.metad
 This should print something similar to the following.
 
 ```
-kubectl get taskruns bare-build-pipeline-run-source-to-image -ojsonpath='{.metadata.annotations.chains\.tekton\.dev/transparency}'
-http://rekor.rekor-system.svc/api/v1/log/entries?logIndex=40%
+http://rekor.rekor-system.svc/api/v1/log/entries?logIndex=7%
 ```
 
 We can then fetch the corresponding entry from the Rekor log with:
@@ -424,21 +443,27 @@ tkn tr describe --last -o jsonpath="{.metadata.annotations.chains\.tekton\.dev/s
 tkn tr describe --last -o jsonpath="{.metadata.annotations.chains\.tekton\.dev/payload-taskrun-$TASKRUN_UID}" | base64 -d > payload
 ```
 
-***TODO(vaikas): THIS STEP DOES NOT WORK YET WITH INDEXING ISSUES***
+***TODO(vaikas): THIS STEP DOES NOT WORK YET WITH [INDEXING ISSUES](https://github.com/tektoncd/chains/issues/376)***
 Then you can verify the integrity by running cosign again:
 
 ```
 COSIGN_EXPERIMENTAL=1 cosign verify-blob --rekor-url=http://rekor.rekor-system.svc:8080 --allow-insecure-registry --signature ./signature ./payload
 ```
 
-# Additional Tekton resources
+# Additional Tekton resources + tips
+
+**note for MacOS users** You may hit file limits; you can run
+```
+sudo launchctl limit maxfiles 65536 200000
+```
+to remediate that issue.
 
 The above is the "speed run" of the tools and validate that you're up and
 running. While doing development work for your own Pipelines, here are ways to
 to get more insights into running pipelines.
 
 You can view the logs of the pipeline run with the
-[tkn cli](https://tekton.dev/docs/cli/). The -f flag streams tehm in realtime.
+[tkn cli](https://tekton.dev/docs/cli/). The -f flag streams them in realtime.
 
 ```shell
 tkn pipelineruns logs bare-build-pipeline-run -f
