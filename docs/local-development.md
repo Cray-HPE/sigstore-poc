@@ -4,9 +4,7 @@ Local development environment for exercising Tekton and Sigstore running on kind
 
 **Note**: We have to use `--allow-insecure-registry` due to this [cosign bug](https://github.com/sigstore/cosign/issues/1405).
 
-## Notes for macOS
-
-You may hit file limits; you can run `sudo launchctl limit maxfiles 65536 200000` to remediate that issue.
+## Notes for MacOS
 
 The airplay receiver uses port 5000, which may need to be disabled. Further details via [Apple's developer forum](https://developer.apple.com/forums/thread/682332). Alternatively, you can manually modify the script and change the [REGISTRY_PORT](https://github.com/vaikas/sigstore-scaffolding/blob/main/hack/setup-mac-kind.sh#L19)
 
@@ -257,6 +255,58 @@ To review the concise and clear overview of the pipeline run, use the tkn cli.
 tkn pr describe bare-build-pipeline-run
 ```
 
+The output from above should look something like this:
+```
+Name:              bare-build-pipeline-run
+Namespace:         default
+Pipeline Ref:      python-build-pipeline
+Service Account:   default
+Timeout:           1h0m0s
+Labels:
+ tekton.dev/pipeline=python-build-pipeline
+
+🌡️  Status
+
+STARTED       DURATION   STATUS
+6 hours ago   1 minute   Succeeded
+
+⚓ Params
+
+ NAME                                VALUE
+ ∙ git-url                           https://github.com/vaikas/hellopython.git
+ ∙ git-revision                      main
+ ∙ imageUrl                          registry.local:5000/knative/pythontest
+ ∙ SIGSTORE_CT_LOG_PUBLIC_KEY_FILE   /data/ctlog-public.pem
+ ∙ imageTag                          0.1
+ ∙ REQUIREMENTSFILE                  requirements.txt
+ ∙ DOCKERFILE                        ./source/docker/Dockerfile
+ ∙ fulcio-endpoint                   http://fulcio.fulcio-system.svc
+ ∙ rekor-endpoint                    http://rekor.rekor-system.svc
+
+📝 Results
+
+ NAME             VALUE
+ ∙ IMAGE-DIGEST   sha256:ef3a2828fa01e9d4b1e42a4e89cc02f0a447797fa7b94abc937f6573e34e5710
+
+📂 Workspaces
+
+ NAME             SUB PATH   WORKSPACE BINDING
+ ∙ git-source     ---        PersistentVolumeClaim (claimName=shared-task-storage)
+ ∙ dependencies   ---        PersistentVolumeClaim (claimName=python-dependencies-storage)
+
+🗂  Taskruns
+
+ NAME                                             TASK NAME              STARTED       DURATION     STATUS
+ ∙ bare-build-pipeline-run-trivy-scan             trivy-scan             6 hours ago   16 seconds   Succeeded
+ ∙ bare-build-pipeline-run-generate-sbom          generate-sbom          6 hours ago   10 seconds   Succeeded
+ ∙ bare-build-pipeline-run-sign-image             sign-image             6 hours ago   9 seconds    Succeeded
+ ∙ bare-build-pipeline-run-source-to-image        source-to-image        6 hours ago   20 seconds   Succeeded
+ ∙ bare-build-pipeline-run-list-dependencies      list-dependencies      6 hours ago   6 seconds    Succeeded
+ ∙ bare-build-pipeline-run-install-dependencies   install-dependencies   6 hours ago   13 seconds   Succeeded
+ ∙ bare-build-pipeline-run-fetch-from-git         fetch-from-git         6 hours ago   8 seconds    Succeeded
+```
+
+
 You can review the digest in the **Results** section. To reduce cutting and pasting, let's grab it into an `ENV` variable for later steps:
 
 ```shell
@@ -431,14 +481,20 @@ Then you can verify the integrity by running cosign again:
 COSIGN_EXPERIMENTAL=1 cosign verify-blob --rekor-url=http://rekor.rekor-system.svc:8080 --allow-insecure-registry --signature ./signature ./payload
 ```
 
-# Additional Tekton resources
+# Additional Tekton resources + tips
+
+**note for MacOS users** You may hit file limits; you can run
+```
+sudo launchctl limit maxfiles 65536 200000
+```
+to remediate that issue.
 
 The above is the "speed run" of the tools and validate that you're up and
 running. While doing development work for your own Pipelines, here are ways to
 to get more insights into running pipelines.
 
 You can view the logs of the pipeline run with the
-[tkn cli](https://tekton.dev/docs/cli/). The -f flag streams tehm in realtime.
+[tkn cli](https://tekton.dev/docs/cli/). The -f flag streams them in realtime.
 
 ```shell
 tkn pipelineruns logs bare-build-pipeline-run -f
