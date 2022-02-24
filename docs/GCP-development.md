@@ -1,6 +1,4 @@
-_TODO: Need to update_
-
-# Sigstore HPE POC
+# Sigstore HPE POC GCP 
 
 Playground for building an example e2e pipeline using Tekton Pipelines, Chains, Dashboard, Sigstore Rekor, Cosign and Fulcio
 for Python and Kind and/or GCP/GKE.

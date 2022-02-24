@@ -24,11 +24,12 @@ In order to run through this example, you will need the following installed:
 * [rekor-cli](https://github.com/sigstore/rekor/releases)
 * [cosign](https://github.com/sigstore/cosign/releases)
 * [openssl cli](https://www.openssl.org/source/)
+* **GCP Only** [Terraform](https://www.terraform.io/downloads)
 * **Windows Only** [WSL](https://docs.microsoft.com/en-us/windows/wsl/install)
 * [yq](https://github.com/mikefarah/yq#install)
 * [jq](https://stedolan.github.io/jq/download/)
 
-* Read full guidance for local development via the [local tutorial](/docs/local-development.md).
+Read full guidance for local development via the [local tutorial](/docs/local-development.md).
 
 Read full guidance for GCP development via the [GCP tutorial](/docs/GCP-development.md).
 
