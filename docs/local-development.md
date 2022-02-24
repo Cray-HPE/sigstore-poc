@@ -26,6 +26,8 @@ cli on the Linux subsystem.
  * [yq](https://github.com/mikefarah/yq#install)
  * [jq](https://stedolan.github.io/jq/download/)
 
+**Note** You might have to adjust the Docker resource requirements. We have tested these with 5 CPUs, 2GB of RAM, and 1GB of swap.
+
 # Setup Kubernetes cluster
 
 We will setup the local Kubernetes cluster by running the `/hack/kind/setup-kind.sh` script from the root of this repository.
