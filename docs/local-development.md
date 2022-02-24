@@ -26,7 +26,10 @@ cli on the Linux subsystem.
  * [yq](https://github.com/mikefarah/yq#install)
  * [jq](https://stedolan.github.io/jq/download/)
 
-**Note** You might have to adjust the Docker resource requirements. We have tested these with 5 CPUs, 2GB of RAM, and 1GB of swap.
+You need to adjust the Docker resource requirements. We have tested these with the following values:
+ * 5 CPUs
+ * 2GB of RAM
+ * 1GB of swap
 
 # Setup Kubernetes cluster
 
@@ -261,51 +264,12 @@ To review the concise and clear overview of the pipeline run, use the tkn cli.
 tkn pr describe bare-build-pipeline-run
 ```
 
-The output from above should look something like this:
+The output from above should look something like this (abbreviated here):
 ```
 Name:              bare-build-pipeline-run
 Namespace:         default
 Pipeline Ref:      python-build-pipeline
-Service Account:   default
-Timeout:           1h0m0s
-Labels:
- tekton.dev/pipeline=python-build-pipeline
-
-🌡️  Status
-
-STARTED       DURATION   STATUS
-6 hours ago   1 minute   Succeeded
-
-⚓ Params
-
- NAME                                VALUE
- ∙ git-url                           https://github.com/vaikas/hellopython.git
- ∙ git-revision                      main
- ∙ imageUrl                          registry.local:5000/knative/pythontest
- ∙ SIGSTORE_CT_LOG_PUBLIC_KEY_FILE   /data/ctlog-public.pem
- ∙ imageTag                          0.1
- ∙ REQUIREMENTSFILE                  requirements.txt
- ∙ DOCKERFILE                        ./source/docker/Dockerfile
- ∙ fulcio-endpoint                   http://fulcio.fulcio-system.svc
- ∙ rekor-endpoint                    http://rekor.rekor-system.svc
-
-📝 Results
-
- NAME             VALUE
- ∙ IMAGE-DIGEST   sha256:ef3a2828fa01e9d4b1e42a4e89cc02f0a447797fa7b94abc937f6573e34e5710
-
-📂 Workspaces
-
- NAME             SUB PATH   WORKSPACE BINDING
- ∙ git-source     ---        PersistentVolumeClaim (claimName=shared-task-storage)
- ∙ dependencies   ---        PersistentVolumeClaim (claimName=python-dependencies-storage)
-
-🗂  Taskruns
-
- NAME                                             TASK NAME              STARTED       DURATION     STATUS
- ∙ bare-build-pipeline-run-trivy-scan             trivy-scan             6 hours ago   16 seconds   Succeeded
- ∙ bare-build-pipeline-run-generate-sbom          generate-sbom          6 hours ago   10 seconds   Succeeded
- ∙ bare-build-pipeline-run-sign-image             sign-image             6 hours ago   9 seconds    Succeeded
+<SNIP>
  ∙ bare-build-pipeline-run-source-to-image        source-to-image        6 hours ago   20 seconds   Succeeded
  ∙ bare-build-pipeline-run-list-dependencies      list-dependencies      6 hours ago   6 seconds    Succeeded
  ∙ bare-build-pipeline-run-install-dependencies   install-dependencies   6 hours ago   13 seconds   Succeeded
