@@ -53,8 +53,16 @@ jobs:
     - name: Run the Python pipeline
       timeout-minutes: 10
       run: |
-        kubectl apply -f ./config/common
-        kubectl apply -f ./config/python
+        while ! kubectl apply -f ./config/common
+        do
+          echo "waiting for Tekton common components to get installed"
+          sleep 2
+        done
+        while ! kubectl apply -f ./config/python
+        do
+          echo "waiting for Tekton Python components to get installed"
+          sleep 2
+        done
 
         # Give s a little time for things to spin up
         sleep 5
@@ -67,7 +75,11 @@ jobs:
     - name: Run the Go pipeline
       timeout-minutes: 10
       run: |
-        kubectl apply -f ./config/go
+        while ! kubectl apply -f ./config/go
+        do
+          echo "waiting for Tekton Python components to get installed"
+          sleep 2
+        done
 
         # Give s a little time for things to spin up
         sleep 5
@@ -116,7 +128,7 @@ jobs:
     - name: Collect pod diagnostics
       if: ${{ failure() }}
       run: |
-        for ns in default fulcio-system rekor-system trillian-system ctlog-system; do
+        for ns in default fulcio-system rekor-system trillian-system ctlog-system tekton-chains tekton-pipelines; do
           kubectl get pods -n${ns}
 
           for x in $(kubectl get pods -n${ns} -oname); do
