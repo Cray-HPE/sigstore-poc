@@ -439,8 +439,7 @@ kubectl get taskruns bare-build-pipeline-run-source-to-image -ojsonpath='{.metad
 This should print something similar to the following.
 
 ```
-kubectl get taskruns bare-build-pipeline-run-source-to-image -ojsonpath='{.metadata.annotations.chains\.tekton\.dev/transparency}'
-http://rekor.rekor-system.svc/api/v1/log/entries?logIndex=40%
+http://rekor.rekor-system.svc/api/v1/log/entries?logIndex=7%
 ```
 
 We can then fetch the corresponding entry from the Rekor log with:
@@ -478,7 +477,7 @@ tkn tr describe --last -o jsonpath="{.metadata.annotations.chains\.tekton\.dev/s
 tkn tr describe --last -o jsonpath="{.metadata.annotations.chains\.tekton\.dev/payload-taskrun-$TASKRUN_UID}" | base64 -d > payload
 ```
 
-***TODO(vaikas): THIS STEP DOES NOT WORK YET WITH INDEXING ISSUES***
+***TODO(vaikas): THIS STEP DOES NOT WORK YET WITH [INDEXING ISSUES](https://github.com/tektoncd/chains/issues/376)***
 Then you can verify the integrity by running cosign again:
 
 ```
