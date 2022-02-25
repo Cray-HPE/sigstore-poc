@@ -65,6 +65,7 @@ REGISTRY_NAME="registry.local"
 REGISTRY_PORT="5000"
 CLUSTER_SUFFIX="cluster.local"
 NODE_COUNT="2"
+SIGSTORE_ONLY="false"
 
 while [[ $# -ne 0 ]]; do
   parameter="$1"
@@ -85,6 +86,9 @@ while [[ $# -ne 0 ]]; do
     --cluster-suffix)
       shift
       CLUSTER_SUFFIX="$1"
+      ;;
+    --sigstore-only)
+      SIGSTORE_ONLY="true"
       ;;
     *) echo "unknown option ${parameter}"; exit 1 ;;
   esac
@@ -386,6 +390,11 @@ kubectl apply -f ${SIGSTORE_SCAFFOLDING_TEST}
 echo "Waiting on checktree check-oidc to complete"
 kubectl wait --timeout=15m --for=condition=Complete jobs checktree check-oidc --namespace default
 echo '::endgroup:: Install Sigstore scaffolding'
+
+if [ $SIGSTORE_ONLY == "true" ]; then
+  echo "Not installing Tekton components due to --sigstore-only flag"
+  exit 0
+fi
 
 echo '::group:: Install Tekton Pipelines and chains'
 while ! kubectl apply --filename "${TEKTON_PIPELINES_RELEASE}"
