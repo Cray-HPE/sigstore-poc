@@ -1,0 +1,78 @@
+#
+# MIT License
+#
+# (C) Copyright 2022 Hewlett Packard Enterprise Development LP
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+# OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+# ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+# OTHER DEALINGS IN THE SOFTWARE.
+#
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: go-shared-task-storage
+spec:
+  resources:
+    requests:
+      storage: 4Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: go-dependencies-storage
+spec:
+  resources:
+    requests:
+      storage: 4Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+
+---
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: go-build-pipeline-run
+spec:
+  serviceAccountName: gke-user
+  params:
+    - name: git-url
+      value: "https://github.com/vaikas/spiffefulciotest.git"
+    - name: git-revision
+      value: "main"
+    - name: MAIN_DIR
+      value: "./cmd"
+    - name: SIGSTORE_CT_LOG_PUBLIC_KEY_FILE
+      value: "/data/ctlog-public.pem"
+    - name: KO_DOCKER_REPO
+      value: gcr.io/chainguard-dev/
+    - name: fulcio-endpoint
+      value: "http://fulcio.fulcio-system.svc"
+    - name: rekor-endpoint
+      value: "http://rekor-server.rekor-system.svc:3000"
+  pipelineRef:
+    name: go-build-pipeline
+  workspaces:
+  - name: git-source # must match workspace name in Pipeline
+    persistentVolumeClaim:
+      claimName: go-shared-task-storage # this PVC must already exist
+  - name: dependencies # must match workspace name in Pipeline
+    persistentVolumeClaim:
+      claimName: go-dependencies-storage # this PVC must already exist

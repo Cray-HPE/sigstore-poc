@@ -1,6 +1,6 @@
 # Pipeline Notes and Principles
 
-This document describes the reasonings and principles behind the way the
+This document describes the reasoning and principles behind the way the
 pipelines are constructed. As they currently stand they are a starting point
 and will most certainly require changes and additions as we learn more about
 the way things are built. The sections in this document are not listed in the
@@ -13,7 +13,7 @@ ones.
 While Pipeline (and Task) resources are not strictly an API, it should be
 considered as such. Each Pipeline and Task should have clearly defined roles
 and responsibilities and the input/output arguments should be given thought just
-like when one were to write an API for a library. Since there are many different
+like when one were to write an API for a library. Since there are different
 pipelines being built (currently only Python and Go), having a convention that's
 consistent between the Pipelines makes it easier to re-use Tasks in Pipelines
 and for a new Pipeline to look and feel familiar if a user is familiar with an
@@ -53,14 +53,14 @@ One option for speeding up the stages in the pipeline is to define Workspace
 that's used as a Cache between Tasks in a Pipeline. This has not been
 implemented, but one could define a Workspace that should be used for this
 purpose, and any Tasks that could benefit from it could then utilize this cache
-by following a well defined semantics for defining it (by convention for
-example). Furthermore if it is not necessary, one could always just use an
+by following a well-defined semantics for defining it (by convention for
+example). Furthermore, if it is not necessary, one could always just use an
 `EmptyDir` to pass in to these tasks.
 
 # Overview of the existing Pipelines
 
 This section runs through the breakdown of the existing Pipelines demonstrating
-some of the principles above, and how they manifest themselves in the Task
+some principles above, and how they manifest themselves in the Task
 definitions. There are few `OPTIONAL` steps that have not been implemented yet
 but one could see them fitting in quite nicely as necessary.
 
@@ -74,7 +74,7 @@ is maintained.
 ## Fetch Source
 
 This step does precisely what one would expect, it will clone the specified
-github repo into a Workspace.
+GitHub repo into a Workspace.
 
 ## Install Dependencies
 
@@ -125,7 +125,7 @@ Once the image has been created, we run a Trivy scan for it.
 
 # Further notes
 
-It's worth pointing out that by having Tasks with well defined APIs, for example
+It's worth pointing out that by having Tasks with well-defined APIs, for example
 Trivy scan, we can easily re-use it in both the Python / Go Pipelines, and the
 Pipelines only have to have specialized Tasks that are necessary for the
 particular language / tooling.

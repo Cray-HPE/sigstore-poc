@@ -1,5 +1,26 @@
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+#
+# MIT License
+#
+# (C) Copyright 2021-2022 Hewlett Packard Enterprise Development LP
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+# OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+# ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+# OTHER DEALINGS IN THE SOFTWARE.
+#
 
 kind: Namespace
 apiVersion: v1
@@ -7,8 +28,7 @@ metadata:
   name: ctlog-system
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -39,8 +59,7 @@ subjects:
     namespace: ctlog-system
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: v1
 kind: ConfigMap
@@ -55,8 +74,7 @@ data:
     ###################################################################
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: v1
 kind: ServiceAccount
@@ -65,8 +83,7 @@ metadata:
   namespace: ctlog-system
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: batch/v1
 kind: Job
@@ -85,8 +102,7 @@ spec:
           args: ["--namespace=ctlog-system", "--configmap=ctlog-config", "--secret=ctlog-secret"]
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 kind: Namespace
 apiVersion: v1
@@ -94,8 +110,7 @@ metadata:
   name: ctlog-system
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -123,8 +138,7 @@ subjects:
     namespace: ctlog-system
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: v1
 kind: ConfigMap
@@ -139,8 +153,7 @@ data:
     ###################################################################
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: v1
 kind: ServiceAccount
@@ -149,8 +162,7 @@ metadata:
   namespace: ctlog-system
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: batch/v1
 kind: Job
@@ -169,8 +181,7 @@ spec:
           args: ["--namespace=ctlog-system", "--configmap=ctlog-config", "--display_name=ctlogtree"]
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 kind: Namespace
 apiVersion: v1
@@ -178,8 +189,7 @@ metadata:
   name: ctlog-system
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: v1
 kind: ConfigMap
@@ -194,8 +204,7 @@ data:
     ###################################################################
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: v1
 kind: ServiceAccount
@@ -204,8 +213,7 @@ metadata:
   namespace: ctlog-system
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: v1
 kind: ServiceAccount
@@ -256,8 +264,7 @@ spec:
                 path: ct_server.cfg
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 kind: Namespace
 apiVersion: v1
@@ -265,8 +272,7 @@ metadata:
   name: fulcio-system
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -293,8 +299,7 @@ subjects:
     namespace: fulcio-system
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: v1
 kind: ServiceAccount
@@ -306,8 +311,7 @@ metadata:
 ---
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: batch/v1
 kind: Job
@@ -332,8 +336,7 @@ spec:
 
 ---
 
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 kind: Namespace
 apiVersion: v1
@@ -341,8 +344,7 @@ metadata:
   name: fulcio-system
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: v1
 kind: ConfigMap
@@ -373,8 +375,7 @@ data:
     }
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: v1
 kind: ServiceAccount
@@ -426,8 +427,7 @@ spec:
                       mode: 0666
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 kind: Namespace
 apiVersion: v1
@@ -435,8 +435,7 @@ metadata:
   name: rekor-system
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -464,8 +463,7 @@ subjects:
     namespace: rekor-system
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: v1
 kind: ConfigMap
@@ -480,8 +478,7 @@ data:
     ###################################################################
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: v1
 kind: ServiceAccount
@@ -490,8 +487,7 @@ metadata:
   namespace: rekor-system
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: batch/v1
 kind: Job
@@ -509,8 +505,7 @@ spec:
           image: ghcr.io/vaikas/createtree@sha256:4abf45842808aa35a7aa4f2058ff7629ba1c4626571e1a64667828dd1d3759ab
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 kind: Namespace
 apiVersion: v1
@@ -518,8 +513,7 @@ metadata:
   name: rekor-system
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: v1
 kind: ServiceAccount
@@ -558,8 +552,7 @@ spec:
                   key: treeID
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 kind: Namespace
 apiVersion: v1
@@ -567,8 +560,7 @@ metadata:
   name: trillian-system
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: v1
 kind: Secret
@@ -583,8 +575,7 @@ stringData:
   password: trillian
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: v1
 kind: ServiceAccount
@@ -593,8 +584,7 @@ metadata:
   namespace: trillian-system
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: batch/v1
 kind: Job
@@ -633,8 +623,7 @@ spec:
                   key: host
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 kind: Namespace
 apiVersion: v1
@@ -642,8 +631,7 @@ metadata:
   name: trillian-system
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: v1
 kind: Secret
@@ -657,8 +645,7 @@ stringData:
   password: trillian
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: v1
 kind: Service
@@ -706,8 +693,7 @@ spec:
           name: mysql
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 kind: Namespace
 apiVersion: v1
@@ -715,8 +701,7 @@ metadata:
   name: trillian-system
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: v1
 kind: ServiceAccount
@@ -770,8 +755,7 @@ spec:
               containerPort: 8090
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 kind: Namespace
 apiVersion: v1
@@ -779,8 +763,7 @@ metadata:
   name: trillian-system
 
 ---
-# Copyright 2021 Chainguard, Inc.
-# SPDX-License-Identifier: Apache-2.0
+
 
 apiVersion: v1
 kind: ServiceAccount

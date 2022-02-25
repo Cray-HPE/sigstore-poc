@@ -1,15 +1,42 @@
+#
+# MIT License
+#
+# (C) Copyright 2022 Hewlett Packard Enterprise Development LP
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included
+# in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+# OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+# ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+# OTHER DEALINGS IN THE SOFTWARE.
+#
 KIND_CLUSTER_NAME=tekton-tf-dev
 KIND_LOG_LEVEL=6
 WORKSPACE_ID ?= $(shell cd terraform/ && terraform workspace show)
 include .env
 
+TK_CHAINS_HELM_CHART_VERSION="0.2.2"
+TK_DASHBOARD_HELM_CHART_VERSION="0.2.0"
+TK_PIPELINE_HELM_CHART_VERSION="v0.2.1"
+SIGSTORE_HELM_VERSION="0.1.0"
 export
 
 dev_cluster:
 	 kind create cluster \
         --verbosity=${KIND_LOG_LEVEL} \
         --name ${KIND_CLUSTER_NAME} \
-        --config ./config/kind.yaml \
+        --config ./kind.yaml \
         --retain
 
 delete_cluster:
@@ -25,81 +52,142 @@ tf_clean:
 	rm -rf plan.out
 
 tf_init:
-	cd terraform/ && \
-	terraform init
+	terraform -chdir=terraform/ init
 
 tf_get:
-	cd terraform/ && \
-	terraform get
+	terraform -chdir=terraform/ get
 
 # Target apply for the GKE cluster, it has to exist before helm provider can use it
 tf_target_plan:
-	cd terraform/ && \
-	GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} terraform plan \
-	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
-	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
-	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
-	-var="workspace_id=${WORKSPACE_ID}" \
-	-var="config_context=${K8S_CONTEXT}" \
-	-target=google_container_cluster.primary \
-	-target=google_service_account.gke-user \
-	-target=google_project_iam_member.gcr_member
-
-tf_target_apply:
-	cd terraform/ && \
-	GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} terraform apply \
-	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
-	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
-	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
-	-var="config_context=${K8S_CONTEXT}" -var="workspace_id=${WORKSPACE_ID}" \
+	GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} \
+	terraform -chdir=terraform/ plan \
+	-var="TK_PIPELINE_HELM_LOCAL_PATH=${TK_PIPELINE_HELM_LOCAL_PATH}" \
+	-var="TK_CHAINS_HELM_LOCAL_PATH=${TK_CHAINS_HELM_LOCAL_PATH}" \
+	-var="TK_DASHBOARD_HELM_LOCAL_PATH=${TK_DASHBOARD_HELM_LOCAL_PATH}" \
+	-var="WORKSPACE_ID=${WORKSPACE_ID}" \
+	-var="K8S_CONTEXT=${K8S_CONTEXT}" \
+	-var="SIGSTORE_HELM_LOCAL_PATH=${SIGSTORE_HELM_LOCAL_PATH}" \
+	-var="SIGSTORE_HELM_VERSION=${SIGSTORE_HELM_VERSION}" \
+	-var="TK_PIPELINE_HELM_CHART_VERSION=${TK_PIPELINE_HELM_CHART_VERSION}" \
+	-var="TK_DASHBOARD_HELM_CHART_VERSION=${TK_DASHBOARD_HELM_CHART_VERSION}" \
+	-var="TK_CHAINS_HELM_CHART_VERSION=${TK_CHAINS_HELM_CHART_VERSION}" \
+	-var="SIGSTORE_HELM_VERSION=${SIGSTORE_HELM_VERSION}" \
+	-var="TRILLIAN_PASSWORD=${TRILLIAN_PASSWORD}" \
 	-target=google_container_cluster.primary \
 	-target=google_service_account.gke-user \
 	-target=google_project_iam_member.gcr_member \
+	-target=google_container_registry.registry
+
+tf_target_apply:
+	GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} \
+	terraform -chdir=terraform/ apply \
+	-var="TK_PIPELINE_HELM_LOCAL_PATH=${TK_PIPELINE_HELM_LOCAL_PATH}" \
+	-var="TK_CHAINS_HELM_LOCAL_PATH=${TK_CHAINS_HELM_LOCAL_PATH}" \
+	-var="TK_DASHBOARD_HELM_LOCAL_PATH=${TK_DASHBOARD_HELM_LOCAL_PATH}" \
+	-var="WORKSPACE_ID=${WORKSPACE_ID}" \
+	-var="K8S_CONTEXT=${K8S_CONTEXT}" \
+	-var="SIGSTORE_HELM_LOCAL_PATH=${SIGSTORE_HELM_LOCAL_PATH}" \
+	-var="SIGSTORE_HELM_VERSION=${SIGSTORE_HELM_VERSION}" \
+	-var="TK_PIPELINE_HELM_CHART_VERSION=${TK_PIPELINE_HELM_CHART_VERSION}" \
+	-var="TK_DASHBOARD_HELM_CHART_VERSION=${TK_DASHBOARD_HELM_CHART_VERSION}" \
+	-var="TK_CHAINS_HELM_CHART_VERSION=${TK_CHAINS_HELM_CHART_VERSION}" \
+	-var="SIGSTORE_HELM_VERSION=${SIGSTORE_HELM_VERSION}" \
+	-var="TRILLIAN_PASSWORD=${TRILLIAN_PASSWORD}" \
+	-target=google_container_cluster.primary \
+	-target=google_service_account.gke-user \
+	-target=google_project_iam_member.gcr_member \
+	-target=google_container_registry.registry \
 	-auto-approve
 
 
 tf_plan:
-	cd terraform/ && \
-	terraform plan \
-	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
-	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
-	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
-	-var="config_context=${K8S_CONTEXT}" -var="workspace_id=${WORKSPACE_ID}" \
+	GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} \
+	terraform -chdir=terraform/  plan \
+	-var="TK_PIPELINE_HELM_LOCAL_PATH=${TK_PIPELINE_HELM_LOCAL_PATH}" \
+	-var="TK_CHAINS_HELM_LOCAL_PATH=${TK_CHAINS_HELM_LOCAL_PATH}" \
+	-var="TK_DASHBOARD_HELM_LOCAL_PATH=${TK_DASHBOARD_HELM_LOCAL_PATH}" \
+	-var="WORKSPACE_ID=${WORKSPACE_ID}" \
+	-var="K8S_CONTEXT=${K8S_CONTEXT}" \
+	-var="SIGSTORE_HELM_LOCAL_PATH=${SIGSTORE_HELM_LOCAL_PATH}" \
+	-var="SIGSTORE_HELM_VERSION=${SIGSTORE_HELM_VERSION}" \
+	-var="TK_PIPELINE_HELM_CHART_VERSION=${TK_PIPELINE_HELM_CHART_VERSION}" \
+	-var="TK_DASHBOARD_HELM_CHART_VERSION=${TK_DASHBOARD_HELM_CHART_VERSION}" \
+	-var="TK_CHAINS_HELM_CHART_VERSION=${TK_CHAINS_HELM_CHART_VERSION}" \
+	-var="SIGSTORE_HELM_VERSION=${SIGSTORE_HELM_VERSION}" \
+	-var="TRILLIAN_PASSWORD=${TRILLIAN_PASSWORD}" \
 	-out=plan.out
 
 tf_apply:
-	cd terraform/ && \
-	terraform apply \
-	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
-	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
-	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
-	-var="workspace_id=${WORKSPACE_ID}" \
-	-var="config_context=${K8S_CONTEXT}" \
+	GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} \
+	terraform -chdir=terraform/ apply \
+	-var="TK_PIPELINE_HELM_LOCAL_PATH=${TK_PIPELINE_HELM_LOCAL_PATH}" \
+	-var="TK_CHAINS_HELM_LOCAL_PATH=${TK_CHAINS_HELM_LOCAL_PATH}" \
+	-var="TK_DASHBOARD_HELM_LOCAL_PATH=${TK_DASHBOARD_HELM_LOCAL_PATH}" \
+	-var="WORKSPACE_ID=${WORKSPACE_ID}" \
+	-var="K8S_CONTEXT=${K8S_CONTEXT}" \
+	-var="SIGSTORE_HELM_LOCAL_PATH=${SIGSTORE_HELM_LOCAL_PATH}" \
+	-var="SIGSTORE_HELM_VERSION=${SIGSTORE_HELM_VERSION}" \
+	-var="TK_PIPELINE_HELM_CHART_VERSION=${TK_PIPELINE_HELM_CHART_VERSION}" \
+	-var="TK_DASHBOARD_HELM_CHART_VERSION=${TK_DASHBOARD_HELM_CHART_VERSION}" \
+	-var="TK_CHAINS_HELM_CHART_VERSION=${TK_CHAINS_HELM_CHART_VERSION}" \
+	-var="SIGSTORE_HELM_VERSION=${SIGSTORE_HELM_VERSION}" \
+	-var="TRILLIAN_PASSWORD=${TRILLIAN_PASSWORD}" \
 	-auto-approve
 
 tf_fmt:
-	cd terraform/ && \
-	terraform fmt
+	terraform -chdir=terraform/ fmt
 
 tf_target_destroy:
-		cd terraform/ && \
-    	terraform destroy \
-    	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
-    	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
-    	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
-    	-var="workspace_id=${WORKSPACE_ID}" \
-    	-var="config_context=${K8S_CONTEXT}" \
-		-target=google_container_cluster.primary \
-		-target=google_service_account.gke-user \
-		-target=google_project_iam_member.gcr_member \
-    	-auto-approve
+	GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} \
+	terraform -chdir=terraform/ destroy \
+	-var="TK_PIPELINE_HELM_LOCAL_PATH=${TK_PIPELINE_HELM_LOCAL_PATH}" \
+	-var="TK_CHAINS_HELM_LOCAL_PATH=${TK_CHAINS_HELM_LOCAL_PATH}" \
+	-var="TK_DASHBOARD_HELM_LOCAL_PATH=${TK_DASHBOARD_HELM_LOCAL_PATH}" \
+	-var="WORKSPACE_ID=${WORKSPACE_ID}" \
+	-var="K8S_CONTEXT=${K8S_CONTEXT}" \
+	-var="SIGSTORE_HELM_LOCAL_PATH=${SIGSTORE_HELM_LOCAL_PATH}" \
+	-var="SIGSTORE_HELM_VERSION=${SIGSTORE_HELM_VERSION}" \
+	-var="TK_PIPELINE_HELM_CHART_VERSION=${TK_PIPELINE_HELM_CHART_VERSION}" \
+	-var="TK_DASHBOARD_HELM_CHART_VERSION=${TK_DASHBOARD_HELM_CHART_VERSION}" \
+	-var="TK_CHAINS_HELM_CHART_VERSION=${TK_CHAINS_HELM_CHART_VERSION}" \
+	-var="SIGSTORE_HELM_VERSION=${SIGSTORE_HELM_VERSION}" \
+	-var="TRILLIAN_PASSWORD=${TRILLIAN_PASSWORD}" \
+	-target=google_container_cluster.primary \
+	-target=google_service_account.gke-user \
+	-target=google_project_iam_member.gcr_member \
+	-target=google_container_registry.registry
+	-auto-approve
 
 tf_destroy:
-	cd terraform/ && \
-	terraform destroy \
-	-var="tk_pl_local=${TK_PL_HELM_PATH}" \
-	-var="tk_chains_local=${TK_CHAINS_HELM_PATH}" \
-	-var="tk_dashboard_local=${TK_DASHBOARD_HELM_PATH}" \
-	-var="workspace_id=${WORKSPACE_ID}" \
-	-var="config_context=${K8S_CONTEXT}" \
+	GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} \
+	terraform -chdir=terraform/ destroy \
+	-var="TK_PIPELINE_HELM_LOCAL_PATH=${TK_PIPELINE_HELM_LOCAL_PATH}" \
+	-var="TK_CHAINS_HELM_LOCAL_PATH=${TK_CHAINS_HELM_LOCAL_PATH}" \
+	-var="TK_DASHBOARD_HELM_LOCAL_PATH=${TK_DASHBOARD_HELM_LOCAL_PATH}" \
+	-var="WORKSPACE_ID=${WORKSPACE_ID}" \
+	-var="K8S_CONTEXT=${K8S_CONTEXT}" \
+	-var="SIGSTORE_HELM_LOCAL_PATH=${SIGSTORE_HELM_LOCAL_PATH}" \
+	-var="SIGSTORE_HELM_VERSION=${SIGSTORE_HELM_VERSION}" \
+	-var="TK_PIPELINE_HELM_CHART_VERSION=${TK_PIPELINE_HELM_CHART_VERSION}" \
+	-var="TK_DASHBOARD_HELM_CHART_VERSION=${TK_DASHBOARD_HELM_CHART_VERSION}" \
+	-var="TK_CHAINS_HELM_CHART_VERSION=${TK_CHAINS_HELM_CHART_VERSION}" \
+	-var="SIGSTORE_HELM_VERSION=${SIGSTORE_HELM_VERSION}" \
+	-var="TRILLIAN_PASSWORD=${TRILLIAN_PASSWORD}" \
 	-auto-approve
+
+tf_import:
+	GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS} \
+	terraform -chdir=terraform/ import \
+	-var="TK_PIPELINE_HELM_LOCAL_PATH=${TK_PIPELINE_HELM_LOCAL_PATH}" \
+	-var="TK_CHAINS_HELM_LOCAL_PATH=${TK_CHAINS_HELM_LOCAL_PATH}" \
+	-var="TK_DASHBOARD_HELM_LOCAL_PATH=${TK_DASHBOARD_HELM_LOCAL_PATH}" \
+	-var="WORKSPACE_ID=${WORKSPACE_ID}" \
+	-var="K8S_CONTEXT=${K8S_CONTEXT}" \
+	-var="SIGSTORE_HELM_LOCAL_PATH=${SIGSTORE_HELM_LOCAL_PATH}" \
+	-var="SIGSTORE_HELM_VERSION=${SIGSTORE_HELM_VERSION}" \
+	-var="TK_PIPELINE_HELM_CHART_VERSION=${TK_PIPELINE_HELM_CHART_VERSION}" \
+	-var="TK_DASHBOARD_HELM_CHART_VERSION=${TK_DASHBOARD_HELM_CHART_VERSION}" \
+	-var="TK_CHAINS_HELM_CHART_VERSION=${TK_CHAINS_HELM_CHART_VERSION}" \
+	-var="SIGSTORE_HELM_VERSION=${SIGSTORE_HELM_VERSION}" \
+	-var="TRILLIAN_PASSWORD=${TRILLIAN_PASSWORD}" \
+	${ADDRESS} ${TARGET}

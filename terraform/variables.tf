@@ -1,4 +1,4 @@
-variable "workspace_id" {
+variable "WORKSPACE_ID" {
   type        = string
   description = "Terraform workspace name"
 }
@@ -25,54 +25,63 @@ variable "PROJECT_ID" {
   }
 }
 
-variable "config_context" {
+variable "K8S_CONTEXT" {
   default     = "kind-tekton-tf-dev"
   description = "Name of local kubectl context to use for local dev"
 }
 
-variable "tk_pl_helm_chart_version" {
+variable "TK_PIPELINE_HELM_CHART_VERSION" {
   default     = "v0.1.0"
   type        = string
   description = "Helm chart version of tekton pipeline helm chart"
 }
 
-variable "tk_pl_namespace" {
+variable "TK_PIPELINE_NAMESPACE" {
   default     = "tekton-pipelines"
   type        = string
   description = "Namespace to deploy tekton charts"
 }
 
-variable "tk_pl_local" {
+variable "TK_PIPELINE_HELM_LOCAL_PATH" {
   type        = string
   description = "Path to local tekton pipeline helm chart"
 }
 
-variable "tk_dashboard_helm_chart_version" {
+variable "TK_DASHBOARD_HELM_CHART_VERSION" {
   default     = "v0.1.0"
   type        = string
   description = "Tekton Dashboard of the helm chart to deploy"
 }
 
-variable "tk_dashboard_local" {
+variable "TK_DASHBOARD_HELM_LOCAL_PATH" {
   type        = string
   description = "Path to local tekton dashboard helm chart"
 }
 
-variable "tk_chains_namespace" {
+variable "TK_CHAINS_NAMESPACE" {
   default     = "tekton-chains"
   type        = string
   description = "Namespace to deploy tekton chains"
 }
 
-variable "tk_chains_helm_chart_version" {
+variable "TK_CHAINS_HELM_CHART_VERSION" {
   default     = "v0.1.0"
   type        = string
   description = "Helm chart version of tekton chains to deploy"
 }
 
-variable "tk_chains_local" {
+variable "TK_CHAINS_HELM_LOCAL_PATH" {
   type        = string
   description = "Path to local tekton chains helm chart"
 }
 
+variable "SIGSTORE_HELM_LOCAL_PATH" {
+  type        = string
+  description = "Path to local sigstore helm chart"
+}
 
+variable "SIGSTORE_HELM_VERSION" {
+  default     = "v0.1.0"
+  type        = string
+  description = "Helm chart version of sigstore scaffolding deploy"
+}
