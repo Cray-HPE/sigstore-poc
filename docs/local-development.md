@@ -6,9 +6,9 @@ Local development environment for exercising Tekton and Sigstore running on kind
 
 ## Notes for MacOS
 
-The airplay receiver uses port 5000, which may need to be disabled. Further details via 
-[Apple's developer forum](https://developer.apple.com/forums/thread/682332). Alternatively, you can manually modify the 
-script and change the [REGISTRY_PORT](https://github.com/vaikas/sigstore-scaffolding/blob/main/hack/setup-mac-kind.sh#L19)
+The airplay receiver uses port 5000, which may need to be disabled. Further details via
+[Apple's developer forum](https://developer.apple.com/forums/thread/682332). Alternatively, you can manually modify the
+script and change the [REGISTRY_PORT](https://github.com/sigstore/scaffolding/blob/main/hack/setup-kind.sh#L34)
 
 
 In order to run through this example, you will need the following installed. For
@@ -34,7 +34,7 @@ You need to adjust the Docker resource requirements. We have tested these with t
 
 # Setup Kubernetes cluster
 
-We will set up the local Kubernetes cluster by running the `/hack/kind/setup-kind.sh` script from the root of this 
+We will set up the local Kubernetes cluster by running the `/hack/kind/setup-kind.sh` script from the root of this
 repository.
 
 ```shell
@@ -56,10 +56,10 @@ into /etc/hosts.
 **Note**: You may see some errors similar to the following while the script is running. This is fine.
 
 ```
-Error from server (InternalError): error when creating 
-"https://storage.googleapis.com/tekton-releases/chains/latest/release.yaml": Internal error occurred: failed calling 
-webhook "config.webhook.pipeline.tekton.dev": Post 
-"https://tekton-pipelines-webhook.tekton-pipelines.svc:443/config-validation?timeout=10s": dial tcp 10.96.244.5:443: 
+Error from server (InternalError): error when creating
+"https://storage.googleapis.com/tekton-releases/chains/latest/release.yaml": Internal error occurred: failed calling
+webhook "config.webhook.pipeline.tekton.dev": Post
+"https://tekton-pipelines-webhook.tekton-pipelines.svc:443/config-validation?timeout=10s": dial tcp 10.96.244.5:443:
 connect: connection refused
 ```
 
@@ -85,8 +85,8 @@ a `sigstore-worker`, and a `sigstore-control-plane`.
 
 ### Verify sigstore installs
 
-There are two jobs that run to verify the installation. The first is `check-oidc` which signs an image with Cosign, 
-and the second is `checktree` which ensures it's properly added to the Rekor transparency log. Both of them should 
+There are two jobs that run to verify the installation. The first is `check-oidc` which signs an image with Cosign,
+and the second is `checktree` which ensures it's properly added to the Rekor transparency log. Both of them should
 show `1/1` completions.
 
 ```bash
@@ -183,14 +183,14 @@ Root Hash: 062e2fa50e2b523f9cfd4eadc4b67745436226d64bf9799d57c5dc023681c4b8
 Timestamp: 2022-02-04T22:09:46Z
 ```
 
-If you run through this example more than once, you can remove the `/.rekor/state.json` file in order to get 
-verification output again. Or alternatively you can invoke rekor-cli with `--store_tree_state=false` flag. 
+If you run through this example more than once, you can remove the `/.rekor/state.json` file in order to get
+verification output again. Or alternatively you can invoke rekor-cli with `--store_tree_state=false` flag.
 Otherwise, rekor-cli will complain that the state of the tree is suspect (which it is, since we recreated it :) ).
 
 ### Certificates
 
-There are two certificates that we need; the CT Log and Fulcio root certs. Note that if you are switching back and 
-forth between public and your instance, you may not want to export these variables (or unexport them when switching 
+There are two certificates that we need; the CT Log and Fulcio root certs. Note that if you are switching back and
+forth between public and your instance, you may not want to export these variables (or unexport them when switching
 to public instances).
 
 Get the CT Log public certificate:
@@ -209,8 +209,8 @@ export SIGSTORE_ROOT_FILE=./fulcio-root.pem
 
 # Running through Tekton tasks
 
-Once you've installed the above, you can install the Tekton task and pipeline pieces. This is a very rough beginning of 
-a proper Python pipeline and is meant to demonstrate breaking the large build into multiple steps and providing 
+Once you've installed the above, you can install the Tekton task and pipeline pieces. This is a very rough beginning of
+a proper Python pipeline and is meant to demonstrate breaking the large build into multiple steps and providing
 attestations at each level via Tekton Chains.
 
 ## Install tasks and pipelines
@@ -271,7 +271,7 @@ bare-build-pipeline-run   True        Succeeded   6h13m       6h12m
 
 ## Inspect results
 
-As part of the pipeline run we create a container image for it, sign it with Cosign, create an SBOM, and perform a 
+As part of the pipeline run we create a container image for it, sign it with Cosign, create an SBOM, and perform a
 Trivy scan for it.
 
 To review the concise and clear overview of the pipeline run, use the tkn cli.
@@ -293,7 +293,7 @@ Pipeline Ref:      python-build-pipeline
 ```
 
 
-You can review the digest in the **Results** section. To reduce cutting and pasting, let's grab it into an `ENV` 
+You can review the digest in the **Results** section. To reduce cutting and pasting, let's grab it into an `ENV`
 variable for later steps:
 
 ```shell
@@ -413,7 +413,7 @@ The following checks were performed on each of these signatures:
   - Any certificates were verified against the Fulcio roots.
 ```
 
-Verify the Tekton Chains by choosing one of the steps. We can do this for any of the taskruns, but let's do the one 
+Verify the Tekton Chains by choosing one of the steps. We can do this for any of the taskruns, but let's do the one
 that does the build. Tekton stores this information in the Taskrun annotations, so let's pull out the transparency entry.
 
 ```shell
@@ -512,7 +512,7 @@ When the pipeline finishes, you'll receive the following output in the logs.
 
 # Cleaning up
 
-To clean up the cluster as well as a local Docker registry daemon container, run `/hack/kind/teardown-kind.sh` 
+To clean up the cluster as well as a local Docker registry daemon container, run `/hack/kind/teardown-kind.sh`
 script from the root of this repository.
 
 ```shell
