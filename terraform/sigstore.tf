@@ -4,18 +4,18 @@ variable "trillian_sa_names" {
 }
 
 resource "helm_release" "sigstore_scaffold" {
-  depends_on      = [google_sql_database.database_trillian, google_container_cluster.primary]
-  timeout         = "300"
-  name            = "sigstore-scaffolding"
-  chart           = "${var.SIGSTORE_HELM_LOCAL_PATH}/charts/scaffold"
-  version         = var.SIGSTORE_HELM_VERSION
-  force_update    = true
-  recreate_pods   = true
-  wait_for_jobs   = true
-  wait            = false
-  replace         = true
-  cleanup_on_fail = true
-  //dependency_update = true
+  depends_on        = [google_sql_database.database_trillian, google_container_cluster.primary]
+  timeout           = "300"
+  name              = "sigstore-scaffolding"
+  chart             = "${var.SIGSTORE_HELM_LOCAL_PATH}/charts/scaffold"
+  version           = var.SIGSTORE_HELM_VERSION
+  force_update      = true
+  recreate_pods     = true
+  wait_for_jobs     = true
+  wait              = false
+  replace           = true
+  cleanup_on_fail   = true
+  dependency_update = true
   set {
     name  = "trillian.mysql.gcp.cloudsql.registry"
     value = "gcr.io"

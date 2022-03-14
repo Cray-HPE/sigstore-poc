@@ -41,7 +41,7 @@ make tf_init tf_target_plan tf_target_apply
 ```
 
 
-**NOTE** Since we are using GCP SQL instance, we need to use CloudSQL Proxy, now that cuases issues with a sidecars and 
+**NOTE** Since we are using GCP SQL instance, we need to use CloudSQL Proxy, now that causes issues with a sidecars and 
 Kubernetes Jobs, see this [KEP for more information](https://github.com/kubernetes/enhancements/issues/2872). 
 So we have own process for dealing with this, we can use the images stored in the defaults. Or rebuild your own and use those.
 [SQLproxy is here](cmd/trillian/sqlproxy)
@@ -49,8 +49,13 @@ So we have own process for dealing with this, we can use the images stored in th
 We can use `ko` to build and push those images to gcr. https://github.com/google/ko
 
 ```shell
-KO_DOCKER_REPO=gcr.io/YOURPROJECT/sqlproxy ko build --platform=all sigstore-poc/cmd/trillian/sqlproxy/cmd -B
-KO_DOCKER_REPO=gcr.io/YOURPROJECT/ ko build --platform=all sigstore-poc/cmd/trillian/createdb/ -B
+cd sigstore-poc/cmd/trillian/sqlproxy/cmd
+KO_DOCKER_REPO=gcr.io/YOURPROJECT/sqlproxy ko build --platform=all . -B
+```
+Do the same thing for the Createdb job
+```shell
+cd sigstore-poc/cmd/trillian/createdb/
+KO_DOCKER_REPO=gcr.io/YOURPROJECT/ ko build --platform=all . -B
 ```
 
 We need to make sure we have the helm charts locally as they are not stored in Artifactory hub.
@@ -72,7 +77,7 @@ TK_PIPELINE_HELM_LOCAL_PATH=$PWD/tekton-helm-chart/charts/tekton-pipelines
 TK_CHAINS_HELM_LOCAL_PATH=$PWD/tekton-helm-chart/charts/tekton-chains
 TK_DASHBOARD_HELM_LOCAL_PATH=$PWD/tekton-helm-chart/charts/tekton-dashboard
 GOOGLE_APPLICATION_CREDENTIALS=$HOME/.config/gcloud/application_default_credentials.json
-SIGSTORE_HELM_LOCAL_PATH=/Users/strongjz/Documents/code/go/src/github.com/sabre1041/sigstore-charts
+SIGSTORE_HELM_LOCAL_PATH=$PWD/sigstore-charts
 TRILLIAN_PASSWORD=trillian
 ```
 
@@ -128,7 +133,7 @@ kubectl logs deployment/fulcio -n fulcio-system
 Verifying Rekor server deployment 
 
 ```shell
-k logs deployment/rekor-server -n rekor-system
+kubectl logs deployment/rekor-server -n rekor-system
 2022-02-23T18:29:56.374Z        INFO    app/serve.go:70 starting rekor-server @ {
   "GitVersion": "v0.5.0",
   "GitCommit": "09ecf71dff57de24ec5e779b4077b187956edf0e",
@@ -204,7 +209,7 @@ pipeline pieces. This is very rough beginning of a proper Python pipeline and is
 meant to demonstrate breaking the large build into multiple steps and providing
 attestations at each level via Tekton Chains.
 
-#### Install all the tasks that our needed for the pipeline
+#### Install all the tasks that are needed for the pipeline
 
 ```shell
 kubectl apply -f ./config/common/
