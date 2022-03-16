@@ -46,9 +46,9 @@ if uname -r | grep --quiet microsoft ; then
   RUNNING_ON_LINUX="false"
 fi
 
-SIGSTORE_SCAFFOLDING_RELEASE="https://github.com/sigstore/scaffolding/releases/download/v0.2.1/release.yaml"
+SIGSTORE_SCAFFOLDING_RELEASE="https://github.com/sigstore/scaffolding/releases/download/v0.2.2/release.yaml"
 
-SIGSTORE_SCAFFOLDING_TEST="https://github.com/sigstore/scaffolding/releases/download/v0.2.1/testrelease.yaml"
+SIGSTORE_SCAFFOLDING_TEST="https://github.com/sigstore/scaffolding/releases/download/v0.2.2/testrelease.yaml"
 
 TEKTON_CHAINS_RELEASE="https://storage.googleapis.com/tekton-releases/chains/latest/release.yaml"
 TEKTON_PIPELINES_RELEASE="https://storage.googleapis.com/tekton-releases-nightly/pipeline/latest/release.yaml"

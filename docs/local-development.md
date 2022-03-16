@@ -359,7 +359,7 @@ Status: Downloaded newer image for registry.local:5000/knative/pythontest@sha256
 Verify that the image was signed.
 
 ```shell
-COSIGN_EXPERIMENTAL=1 cosign verify --allow-insecure-registry --rekor-url=http://rekor.rekor-system.svc:8080 --allow-insecure-registry $IMAGE_ID
+SIGSTORE_TRUST_REKOR_API_PUBLIC_KEY=1 COSIGN_EXPERIMENTAL=1 cosign verify --allow-insecure-registry --rekor-url=http://rekor.rekor-system.svc:8080 --allow-insecure-registry $IMAGE_ID
 ```
 
 After running the above, you should get output similar to this.
