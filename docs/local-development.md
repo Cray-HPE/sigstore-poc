@@ -85,8 +85,10 @@ a `sigstore-worker`, and a `sigstore-control-plane`.
 
 ### Verify sigstore installs
 
-There are two jobs that run to verify the installation. The first is `check-oidc` which signs an image with Cosign,
-and the second is `checktree` which ensures it's properly added to the Rekor transparency log. Both of them should
+There are three jobs that run to verify the installation. The first is
+`sign-job` which signs an image with Cosign, and the second is `checktree` which
+ ensures it's properly added to the Rekor transparency log, and last is
+ `verify-job` which uses cosign to verify the signed imafe. Each of them should
 show `1/1` completions.
 
 ```bash
@@ -95,8 +97,9 @@ kubectl get jobs
 
 ```
 NAME         COMPLETIONS   DURATION   AGE
-check-oidc   1/1           40s        9m19s
+sign-job     1/1           40s        9m19s
 checktree    1/1           59s        9m19s
+verify-job   1/1           31s        9m19s
 ```
 
 You can get the completed pod logs next.

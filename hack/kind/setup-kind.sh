@@ -383,8 +383,8 @@ echo 'Removing a possibly already existing ctlog public secret. If this errors, 
 kubectl delete secret/ctlog-public-key || true
 kubectl -n ctlog-system get secrets ctlog-public-key -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
 kubectl apply -f ${SIGSTORE_SCAFFOLDING_TEST}
-echo "Waiting on checktree check-oidc to complete"
-kubectl wait --timeout=15m --for=condition=Complete jobs checktree check-oidc --namespace default
+echo "Waiting on checktree sign-job verify-job to complete"
+kubectl wait --timeout=15m --for=condition=Complete jobs checktree sign-job verify-job --namespace default
 echo '::endgroup:: Install Sigstore scaffolding'
 
 if [ $SIGSTORE_ONLY == "true" ]; then
