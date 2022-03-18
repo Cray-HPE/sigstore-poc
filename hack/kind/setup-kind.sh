@@ -382,6 +382,13 @@ echo 'Running smoke test'
 echo 'Removing a possibly already existing ctlog public secret. If this errors, this is ok'
 kubectl delete secret/ctlog-public-key || true
 kubectl -n ctlog-system get secrets ctlog-public-key -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
+# Grab the secret from the fulcio-system namespace and make a copy
+# in our namespace so we can get access to the Fulcio public key
+# so we can verify against it.
+echo 'Removing a possibly already existing fulcio cert. If this errors, this is ok'
+kubectl delete secret/fulcio-secret || true
+kubectl -n fulcio-system get secrets fulcio-secret -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
+
 kubectl apply -f ${SIGSTORE_SCAFFOLDING_TEST}
 echo "Waiting on checktree sign-job verify-job to complete"
 kubectl wait --timeout=15m --for=condition=Complete jobs checktree sign-job verify-job --namespace default
