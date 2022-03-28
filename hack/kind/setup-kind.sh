@@ -46,9 +46,9 @@ if uname -r | grep --quiet microsoft ; then
   RUNNING_ON_LINUX="false"
 fi
 
-SIGSTORE_SCAFFOLDING_RELEASE="https://github.com/sigstore/scaffolding/releases/download/v0.2.1/release.yaml"
+SIGSTORE_SCAFFOLDING_RELEASE="https://github.com/sigstore/scaffolding/releases/download/v0.2.3/release.yaml"
 
-SIGSTORE_SCAFFOLDING_TEST="https://github.com/sigstore/scaffolding/releases/download/v0.2.1/testrelease.yaml"
+SIGSTORE_SCAFFOLDING_TEST="https://github.com/sigstore/scaffolding/releases/download/v0.2.3/testrelease.yaml"
 
 TEKTON_CHAINS_RELEASE="https://storage.googleapis.com/tekton-releases/chains/latest/release.yaml"
 TEKTON_PIPELINES_RELEASE="https://storage.googleapis.com/tekton-releases-nightly/pipeline/latest/release.yaml"
@@ -382,9 +382,16 @@ echo 'Running smoke test'
 echo 'Removing a possibly already existing ctlog public secret. If this errors, this is ok'
 kubectl delete secret/ctlog-public-key || true
 kubectl -n ctlog-system get secrets ctlog-public-key -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
+# Grab the secret from the fulcio-system namespace and make a copy
+# in our namespace so we can get access to the Fulcio public key
+# so we can verify against it.
+echo 'Removing a possibly already existing fulcio cert. If this errors, this is ok'
+kubectl delete secret/fulcio-secret || true
+kubectl -n fulcio-system get secrets fulcio-secret -oyaml | sed 's/namespace: .*/namespace: default/' | kubectl apply -f -
+
 kubectl apply -f ${SIGSTORE_SCAFFOLDING_TEST}
-echo "Waiting on checktree check-oidc to complete"
-kubectl wait --timeout=15m --for=condition=Complete jobs checktree check-oidc --namespace default
+echo "Waiting on checktree sign-job verify-job to complete"
+kubectl wait --timeout=15m --for=condition=Complete jobs checktree sign-job verify-job --namespace default
 echo '::endgroup:: Install Sigstore scaffolding'
 
 if [ $SIGSTORE_ONLY == "true" ]; then
