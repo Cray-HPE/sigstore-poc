@@ -14,6 +14,10 @@ resource "google_privateca_ca_pool" "default" {
       allow_config_based_issuance = true
     }
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Certificate Authority for Fulcio to requests certs from
