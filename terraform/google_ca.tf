@@ -1,6 +1,6 @@
 # CA pool to use for GCP CA services for Fulcio
 resource "google_privateca_ca_pool" "default" {
-  name     = "sigstore-poc-${var.WORKSPACE_ID}"
+  name     = "sigstore-${var.WORKSPACE_ID}"
   location = var.DEFAULT_LOCATION
   tier     = "DEVOPS"
   publishing_options {
@@ -14,6 +14,7 @@ resource "google_privateca_ca_pool" "default" {
       allow_config_based_issuance = true
     }
   }
+
   lifecycle {
     prevent_destroy = true
   }

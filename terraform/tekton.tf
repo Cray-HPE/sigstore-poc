@@ -76,8 +76,11 @@ data "kubernetes_secret" "ctlog-public-key" {
   }
 }
 
+resource "time_sleep" "wait_30_seconds" {
+  create_duration = "30s"
+}
 resource "kubernetes_secret" "ctlog-public-key" {
-  depends_on = [helm_release.sigstore_scaffold]
+  depends_on = [helm_release.sigstore_scaffold, time_sleep.wait_30_seconds] #ctlog times a minute to come up
   metadata {
     name      = data.kubernetes_secret.ctlog-public-key.metadata[0].name
     namespace = "default"
